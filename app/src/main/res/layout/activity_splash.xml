@@ -1,6 +1,49 @@
 <?xml version="1.0" encoding="utf-8"?>
+
+<!--
+    Màn hình Splash của ứng dụng MomentShare.
+    File này thuộc phần Người 1 - Tài khoản, hồ sơ cá nhân.
+
+    Chức năng:
+    - Hiển thị tên ứng dụng khi mở app.
+    - Hiển thị slogan ngắn.
+    - Hiển thị ProgressBar trong lúc kiểm tra trạng thái đăng nhập.
+-->
 <LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
     android:layout_width="match_parent"
-    android:layout_height="match_parent">
+    android:layout_height="match_parent"
+    android:background="#FFFFFF"
+    android:gravity="center"
+    android:orientation="vertical"
+    android:padding="24dp">
+
+    <!-- Tên ứng dụng -->
+    <TextView
+        android:id="@+id/txtAppName"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:text="MomentShare"
+        android:textAlignment="center"
+        android:textColor="#222222"
+        android:textSize="34sp"
+        android:textStyle="bold" />
+
+    <!-- Slogan ngắn của ứng dụng -->
+    <TextView
+        android:id="@+id/txtSlogan"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:layout_marginTop="10dp"
+        android:text="Chia sẻ khoảnh khắc với bạn bè thân thiết"
+        android:textAlignment="center"
+        android:textColor="#777777"
+        android:textSize="15sp" />
+
+    <!-- ProgressBar hiển thị khi app đang khởi động -->
+    <ProgressBar
+        android:id="@+id/progressBar"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:layout_marginTop="28dp" />
 
 </LinearLayout>
