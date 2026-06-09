@@ -1,6 +1,135 @@
 <?xml version="1.0" encoding="utf-8"?>
-<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
-    android:layout_width="match_parent"
-    android:layout_height="match_parent">
 
-</LinearLayout>
+<!--
+    Màn hình chỉnh sửa hồ sơ cá nhân.
+    File này thuộc phần Người 1 - Tài khoản, hồ sơ cá nhân.
+    Chức năng chính:
+    - Hiển thị form chỉnh sửa họ tên.
+    - Cho phép nhập/cập nhật mô tả cá nhân.
+    - Có nút lưu thay đổi và nút hủy để quay lại màn hình hồ sơ.
+-->
+<ScrollView xmlns:android="http://schemas.android.com/apk/res/android"
+    android:layout_width="match_parent"
+    android:layout_height="match_parent"
+    android:background="#FFFFFF"
+    android:fillViewport="true">
+
+    <LinearLayout
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:orientation="vertical"
+        android:padding="24dp">
+
+        <!-- Tiêu đề màn hình -->
+        <TextView
+            android:id="@+id/txtEditProfileTitle"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:text="Chỉnh sửa hồ sơ"
+            android:textAlignment="center"
+            android:textColor="#222222"
+            android:textSize="26sp"
+            android:textStyle="bold" />
+
+        <!-- Mô tả ngắn cho người dùng -->
+        <TextView
+            android:id="@+id/txtEditProfileSubtitle"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="8dp"
+            android:text="Cập nhật thông tin cá nhân của bạn"
+            android:textAlignment="center"
+            android:textColor="#777777"
+            android:textSize="14sp" />
+
+        <!-- Avatar tạm thời, phần upload avatar có thể làm sau -->
+        <ImageView
+            android:id="@+id/imgAvatar"
+            android:layout_width="110dp"
+            android:layout_height="110dp"
+            android:layout_gravity="center_horizontal"
+            android:layout_marginTop="28dp"
+            android:contentDescription="Ảnh đại diện"
+            android:src="@mipmap/ic_launcher_round" />
+
+        <!-- Ô nhập họ tên -->
+        <TextView
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="28dp"
+            android:text="Họ tên"
+            android:textColor="#333333"
+            android:textSize="14sp"
+            android:textStyle="bold" />
+
+        <EditText
+            android:id="@+id/edtFullName"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="6dp"
+            android:background="@android:drawable/edit_text"
+            android:hint="Nhập họ tên"
+            android:inputType="textPersonName"
+            android:minHeight="48dp"
+            android:padding="12dp"
+            android:textColor="#222222"
+            android:textColorHint="#999999" />
+
+        <!-- Ô nhập mô tả cá nhân -->
+        <TextView
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="18dp"
+            android:text="Mô tả cá nhân"
+            android:textColor="#333333"
+            android:textSize="14sp"
+            android:textStyle="bold" />
+
+        <EditText
+            android:id="@+id/edtBio"
+            android:layout_width="match_parent"
+            android:layout_height="120dp"
+            android:layout_marginTop="6dp"
+            android:background="@android:drawable/edit_text"
+            android:gravity="top"
+            android:hint="Viết một vài dòng giới thiệu về bạn"
+            android:inputType="textMultiLine"
+            android:padding="12dp"
+            android:textColor="#222222"
+            android:textColorHint="#999999" />
+
+        <!-- ProgressBar dùng khi đang lưu dữ liệu lên Firestore -->
+        <ProgressBar
+            android:id="@+id/progressBar"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:layout_gravity="center_horizontal"
+            android:layout_marginTop="20dp"
+            android:visibility="gone" />
+
+        <!-- Nút lưu thay đổi.
+             ID này phải trùng với EditProfileActivity.java:
+             findViewById(R.id.btnSaveProfile)
+        -->
+        <Button
+            android:id="@+id/btnSaveProfile"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="24dp"
+            android:minHeight="50dp"
+            android:text="Lưu thay đổi"
+            android:textAllCaps="false" />
+
+        <!-- Nút hủy chỉnh sửa và quay lại màn hình hồ sơ -->
+        <Button
+            android:id="@+id/btnCancel"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="12dp"
+            android:minHeight="50dp"
+            android:text="Hủy"
+            android:textAllCaps="false" />
+
+    </LinearLayout>
+
+</ScrollView>
