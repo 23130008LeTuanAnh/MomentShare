@@ -120,16 +120,18 @@
             android:text="Lưu thay đổi"
             android:textAllCaps="false" />
 
-        <!-- Nút hủy chỉnh sửa và quay lại màn hình hồ sơ -->
+        <!-- Nút hủy chỉnh sửa và quay lại màn hình hồ sơ.
+             ID này phải trùng với EditProfileActivity.java:
+             findViewById(R.id.btnCancelEdit)
+        -->
         <Button
-            android:id="@+id/btnCancel"
+            android:id="@+id/btnCancelEdit"
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
             android:layout_marginTop="12dp"
             android:minHeight="50dp"
             android:text="Hủy"
             android:textAllCaps="false" />
-
     </LinearLayout>
 
 </ScrollView>
