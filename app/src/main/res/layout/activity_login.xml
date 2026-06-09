@@ -1,6 +1,112 @@
 <?xml version="1.0" encoding="utf-8"?>
-<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
-    android:layout_width="match_parent"
-    android:layout_height="match_parent">
 
-</LinearLayout>
+<!--
+    Màn hình đăng nhập của ứng dụng MomentShare.
+    File này thuộc phần Người 1 - Tài khoản, hồ sơ cá nhân.
+
+    Chức năng:
+    - Nhập email hoặc username.
+    - Nhập mật khẩu.
+    - Bấm nút đăng nhập.
+    - Chuyển sang màn hình đăng ký nếu chưa có tài khoản.
+-->
+<ScrollView xmlns:android="http://schemas.android.com/apk/res/android"
+    android:layout_width="match_parent"
+    android:layout_height="match_parent"
+    android:background="#FFFFFF"
+    android:fillViewport="true">
+
+    <LinearLayout
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:gravity="center_horizontal"
+        android:orientation="vertical"
+        android:padding="24dp">
+
+        <!-- Tên ứng dụng -->
+        <TextView
+            android:id="@+id/txtAppName"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="60dp"
+            android:text="MomentShare"
+            android:textAlignment="center"
+            android:textColor="#222222"
+            android:textSize="32sp"
+            android:textStyle="bold" />
+
+        <!-- Mô tả ngắn màn hình đăng nhập -->
+        <TextView
+            android:id="@+id/txtLoginSubtitle"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="8dp"
+            android:text="Đăng nhập để chia sẻ khoảnh khắc với bạn bè"
+            android:textAlignment="center"
+            android:textColor="#777777"
+            android:textSize="14sp" />
+
+        <!-- Ô nhập email hoặc username -->
+        <EditText
+            android:id="@+id/edtAccount"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="40dp"
+            android:background="@android:drawable/edit_text"
+            android:hint="Email hoặc username"
+            android:inputType="textEmailAddress"
+            android:minHeight="48dp"
+            android:padding="12dp"
+            android:textColor="#222222"
+            android:textColorHint="#999999" />
+
+        <!-- Ô nhập mật khẩu -->
+        <EditText
+            android:id="@+id/edtPassword"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="16dp"
+            android:background="@android:drawable/edit_text"
+            android:hint="Mật khẩu"
+            android:inputType="textPassword"
+            android:minHeight="48dp"
+            android:padding="12dp"
+            android:textColor="#222222"
+            android:textColorHint="#999999" />
+
+        <!-- ProgressBar hiển thị khi đang xử lý đăng nhập -->
+        <ProgressBar
+            android:id="@+id/progressBar"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="20dp"
+            android:visibility="gone" />
+
+        <!--
+            Nút đăng nhập.
+            ID này phải trùng với LoginActivity.java:
+            findViewById(R.id.btnLogin)
+        -->
+        <Button
+            android:id="@+id/btnLogin"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="24dp"
+            android:minHeight="50dp"
+            android:text="Đăng nhập"
+            android:textAllCaps="false" />
+
+        <!-- Text chuyển sang màn hình đăng ký -->
+        <TextView
+            android:id="@+id/txtGoToRegister"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="18dp"
+            android:text="Chưa có tài khoản? Đăng ký ngay"
+            android:textAlignment="center"
+            android:textColor="#1976D2"
+            android:textSize="14sp" />
+
+    </LinearLayout>
+
+</ScrollView>
