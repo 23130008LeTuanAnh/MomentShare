@@ -1,9 +1,15 @@
 plugins {
+    // Plugin Android Application dùng để build ứng dụng Android.
     alias(libs.plugins.android.application)
+
+    // Plugin Google Services dùng để đọc file google-services.json
+    // và kết nối ứng dụng Android với Firebase project.
+    alias(libs.plugins.google.services)
 }
 
 android {
     namespace 'com.example.momentshare'
+
     compileSdk {
         version = release(36) {
             minorApiLevel = 1
@@ -27,17 +33,31 @@ android {
             }
         }
     }
+
     compileOptions {
+        // Project đang dùng Java 11.
         sourceCompatibility JavaVersion.VERSION_11
         targetCompatibility JavaVersion.VERSION_11
     }
 }
 
 dependencies {
+    // AndroidX và Material UI.
     implementation libs.activity.ktx
     implementation libs.appcompat
     implementation libs.constraintlayout
     implementation libs.material
+
+    // Firebase BoM quản lý version đồng bộ cho các thư viện Firebase.
+    implementation platform(libs.firebase.bom)
+
+    // Firebase Authentication dùng cho đăng ký, đăng nhập và đăng xuất.
+    implementation libs.firebase.auth
+
+    // Cloud Firestore dùng để lưu hồ sơ người dùng trong collection users.
+    implementation libs.firebase.firestore
+
+    // Thư viện kiểm thử mặc định.
     testImplementation libs.junit
     androidTestImplementation libs.espresso.core
     androidTestImplementation libs.ext.junit
