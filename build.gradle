@@ -1,4 +1,8 @@
 // Top-level build file where you can add configuration options common to all sub-projects/modules.
 plugins {
+    // Plugin Android Application cấp project.
     alias(libs.plugins.android.application) apply false
+
+    // Plugin Google Services cấp project để các module có thể dùng Firebase.
+    alias(libs.plugins.google.services) apply false
 }
