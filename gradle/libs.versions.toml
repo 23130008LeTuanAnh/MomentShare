@@ -8,6 +8,10 @@ material = "1.10.0"
 activityKtx = "1.8.0"
 constraintlayout = "2.1.4"
 
+# Firebase / Google Services
+googleServices = "4.4.2"
+firebaseBom = "34.8.0"
+
 [libraries]
 junit = { group = "junit", name = "junit", version.ref = "junit" }
 ext-junit = { group = "androidx.test.ext", name = "junit", version.ref = "junitVersion" }
@@ -17,6 +21,13 @@ material = { group = "com.google.android.material", name = "material", version.r
 activity-ktx = { group = "androidx.activity", name = "activity-ktx", version.ref = "activityKtx" }
 constraintlayout = { group = "androidx.constraintlayout", name = "constraintlayout", version.ref = "constraintlayout" }
 
+# Firebase dependencies
+firebase-bom = { group = "com.google.firebase", name = "firebase-bom", version.ref = "firebaseBom" }
+firebase-auth = { group = "com.google.firebase", name = "firebase-auth" }
+firebase-firestore = { group = "com.google.firebase", name = "firebase-firestore" }
+
 [plugins]
 android-application = { id = "com.android.application", version.ref = "agp" }
 
+# Google Services plugin dùng để đọc file google-services.json
+google-services = { id = "com.google.gms.google-services", version.ref = "googleServices" }
