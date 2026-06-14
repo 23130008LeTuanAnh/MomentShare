@@ -57,6 +57,12 @@ dependencies {
     // Cloud Firestore dùng để lưu hồ sơ người dùng trong collection users.
     implementation libs.firebase.firestore
 
+    // Firebase Storage dùng để upload avatar người dùng.
+    implementation libs.firebase.storage
+
+    // Glide dùng để tải và hiển thị avatar từ URL.
+    implementation libs.glide
+
     // Thư viện kiểm thử mặc định.
     testImplementation libs.junit
     androidTestImplementation libs.espresso.core
