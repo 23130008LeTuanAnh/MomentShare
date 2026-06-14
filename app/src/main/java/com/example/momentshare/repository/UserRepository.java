@@ -21,6 +21,7 @@ import java.util.Map;
  * - Lấy thông tin hồ sơ người dùng theo userId.
  * - Tìm người dùng theo username để hỗ trợ đăng nhập bằng username.
  * - Cập nhật họ tên và bio trong hồ sơ cá nhân.
+ * - Cập nhật avatarUrl khi người dùng đổi ảnh đại diện.
  */
 public class UserRepository {
 
@@ -148,7 +149,7 @@ public class UserRepository {
     /**
      * Cập nhật họ tên và bio trong hồ sơ cá nhân.
      *
-     * Hàm này dùng trong EditProfileActivity.
+     * Hàm này dùng trong EditProfileActivity khi người dùng không chọn avatar mới.
      *
      * @param userId mã người dùng hiện tại
      * @param fullName họ tên mới
@@ -170,6 +171,42 @@ public class UserRepository {
                 .addOnSuccessListener(unused -> callback.onSuccess())
                 .addOnFailureListener(e ->
                         callback.onFailure("Không thể cập nhật hồ sơ: " + e.getMessage()));
+    }
+
+    /**
+     * Cập nhật họ tên, bio và avatarUrl trong hồ sơ cá nhân.
+     *
+     * Hàm này dùng khi người dùng chọn avatar mới trong EditProfileActivity.
+     *
+     * Quy trình:
+     * 1. Người dùng chọn avatar mới.
+     * 2. StorageRepository upload ảnh lên Firebase Storage.
+     * 3. Sau khi upload thành công, nhận downloadUrl.
+     * 4. Hàm này lưu fullName, bio và avatarUrl mới vào Firestore.
+     *
+     * @param userId mã người dùng hiện tại
+     * @param fullName họ tên mới
+     * @param bio mô tả cá nhân mới
+     * @param avatarUrl link avatar mới sau khi upload lên Firebase Storage
+     * @param callback callback báo thành công/thất bại
+     */
+    public void updateProfileWithAvatar(@NonNull String userId,
+                                        @NonNull String fullName,
+                                        @NonNull String bio,
+                                        @NonNull String avatarUrl,
+                                        @NonNull ActionCallback callback) {
+
+        Map<String, Object> updates = new HashMap<>();
+        updates.put("fullName", fullName);
+        updates.put("bio", bio);
+        updates.put("avatarUrl", avatarUrl);
+
+        db.collection(Constants.COLLECTION_USERS)
+                .document(userId)
+                .update(updates)
+                .addOnSuccessListener(unused -> callback.onSuccess())
+                .addOnFailureListener(e ->
+                        callback.onFailure("Không thể cập nhật avatar: " + e.getMessage()));
     }
 
     /**
