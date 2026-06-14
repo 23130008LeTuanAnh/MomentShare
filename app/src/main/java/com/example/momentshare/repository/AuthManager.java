@@ -16,7 +16,7 @@ import com.google.firebase.auth.FirebaseUser;
  *
  * Nhiệm vụ chính:
  * - Đăng ký tài khoản bằng email và mật khẩu.
- * - Đăng nhập bằng email và mật khẩu.
+ * - Đăng nhập bằng email hoặc username và mật khẩu.
  * - Kiểm tra trạng thái tài khoản active/locked trong Firestore.
  * - Đăng xuất khỏi tài khoản hiện tại.
  */
@@ -77,9 +77,10 @@ public class AuthManager {
      * Đăng ký tài khoản mới.
      *
      * Quy trình:
-     * 1. Kiểm tra username đã tồn tại chưa.
-     * 2. Tạo tài khoản bằng Firebase Authentication.
-     * 3. Lưu hồ sơ người dùng vào collection users trên Firestore.
+     * 1. Chuẩn hóa username.
+     * 2. Kiểm tra username đã tồn tại chưa.
+     * 3. Tạo tài khoản bằng Firebase Authentication.
+     * 4. Lưu hồ sơ người dùng vào collection users trên Firestore.
      *
      * @param fullName họ tên người dùng
      * @param username username dùng để tìm kiếm/kết bạn
@@ -115,6 +116,12 @@ public class AuthManager {
 
     /**
      * Tạo tài khoản bằng Firebase Authentication.
+     *
+     * @param fullName họ tên người dùng
+     * @param username username đã chuẩn hóa
+     * @param email email đăng nhập
+     * @param password mật khẩu
+     * @param callback callback báo thành công/thất bại
      */
     private void createFirebaseAccount(@NonNull String fullName,
                                        @NonNull String username,
@@ -139,6 +146,9 @@ public class AuthManager {
 
     /**
      * Tạo hồ sơ người dùng trong Firestore sau khi FirebaseAuth tạo tài khoản thành công.
+     *
+     * Collection được sử dụng:
+     * users/{userId}
      */
     private void createUserProfile(@NonNull String userId,
                                    @NonNull String fullName,
@@ -201,9 +211,58 @@ public class AuthManager {
     }
 
     /**
+     * Đăng nhập bằng email hoặc username.
+     *
+     * Quy trình:
+     * - Nếu account là email, đăng nhập trực tiếp bằng Firebase Authentication.
+     * - Nếu account là username, tìm user trong Firestore để lấy email.
+     * - Sau khi có email, dùng email đó để đăng nhập Firebase Authentication.
+     * - Sau khi đăng nhập thành công, vẫn kiểm tra status active/locked.
+     *
+     * @param account email hoặc username người dùng nhập
+     * @param password mật khẩu
+     * @param callback callback báo thành công/thất bại
+     */
+    public void loginWithEmailOrUsername(@NonNull String account,
+                                         @NonNull String password,
+                                         @NonNull AuthCallback callback) {
+
+        String normalizedAccount = account.trim();
+
+        if (ValidationUtils.isValidEmail(normalizedAccount)) {
+            login(normalizedAccount, password, callback);
+            return;
+        }
+
+        String normalizedUsername = ValidationUtils.normalizeUsername(normalizedAccount);
+
+        userRepository.getUserByUsername(normalizedUsername, new UserRepository.UserCallback() {
+            @Override
+            public void onSuccess(User user) {
+                String email = user.getEmail();
+
+                if (email == null || email.trim().isEmpty()) {
+                    callback.onFailure("Email tài khoản không hợp lệ");
+                    return;
+                }
+
+                login(email.trim(), password, callback);
+            }
+
+            @Override
+            public void onFailure(String errorMessage) {
+                callback.onFailure(errorMessage);
+            }
+        });
+    }
+
+    /**
      * Kiểm tra trạng thái tài khoản sau khi đăng nhập.
      *
      * Nếu status = locked thì đăng xuất và không cho truy cập ứng dụng.
+     *
+     * @param userId mã tài khoản hiện tại
+     * @param callback callback báo thành công/thất bại
      */
     private void checkAccountStatus(@NonNull String userId,
                                     @NonNull AuthCallback callback) {
