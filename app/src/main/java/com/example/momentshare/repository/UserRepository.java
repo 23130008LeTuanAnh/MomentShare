@@ -18,7 +18,8 @@ import java.util.Map;
  * Nhiệm vụ chính:
  * - Kiểm tra username đã tồn tại chưa.
  * - Tạo hồ sơ người dùng sau khi đăng ký Firebase Authentication.
- * - Lấy thông tin hồ sơ người dùng.
+ * - Lấy thông tin hồ sơ người dùng theo userId.
+ * - Tìm người dùng theo username để hỗ trợ đăng nhập bằng username.
  * - Cập nhật họ tên và bio trong hồ sơ cá nhân.
  */
 public class UserRepository {
@@ -62,6 +63,8 @@ public class UserRepository {
     /**
      * Kiểm tra username đã tồn tại trong collection users hay chưa.
      *
+     * Hàm này dùng trong màn hình đăng ký để đảm bảo username không bị trùng.
+     *
      * @param username username cần kiểm tra
      * @param callback callback trả về true nếu username đã tồn tại
      */
@@ -79,6 +82,8 @@ public class UserRepository {
     /**
      * Tạo document người dùng mới trong Firestore.
      *
+     * Hàm này được gọi sau khi Firebase Authentication tạo tài khoản thành công.
+     *
      * @param user object User chứa thông tin hồ sơ
      * @param callback callback báo thành công/thất bại
      */
@@ -94,6 +99,8 @@ public class UserRepository {
     /**
      * Lấy thông tin người dùng theo userId.
      *
+     * Hàm này dùng trong ProfileActivity, EditProfileActivity và SplashActivity.
+     *
      * @param userId mã người dùng lấy từ Firebase Authentication
      * @param callback callback trả về User nếu tìm thấy
      */
@@ -101,13 +108,47 @@ public class UserRepository {
         db.collection(Constants.COLLECTION_USERS)
                 .document(userId)
                 .get()
-                .addOnSuccessListener(documentSnapshot -> handleUserDocument(documentSnapshot, callback))
+                .addOnSuccessListener(documentSnapshot ->
+                        handleUserDocument(documentSnapshot, callback))
                 .addOnFailureListener(e ->
                         callback.onFailure("Không thể tải hồ sơ người dùng: " + e.getMessage()));
     }
 
     /**
+     * Tìm thông tin người dùng theo username.
+     *
+     * Hàm này phục vụ chức năng đăng nhập bằng username.
+     *
+     * Quy trình:
+     * - Tìm document trong collection users có username trùng với dữ liệu người dùng nhập.
+     * - Nếu tìm thấy, trả về User để AuthManager lấy email đăng nhập FirebaseAuth.
+     * - Nếu không tìm thấy, trả về lỗi "Tài khoản không tồn tại".
+     *
+     * @param username username đã được chuẩn hóa
+     * @param callback callback trả về User hoặc thông báo lỗi
+     */
+    public void getUserByUsername(@NonNull String username, @NonNull UserCallback callback) {
+        db.collection(Constants.COLLECTION_USERS)
+                .whereEqualTo("username", username)
+                .limit(1)
+                .get()
+                .addOnSuccessListener(querySnapshot -> {
+                    if (querySnapshot.isEmpty()) {
+                        callback.onFailure("Tài khoản không tồn tại");
+                        return;
+                    }
+
+                    DocumentSnapshot documentSnapshot = querySnapshot.getDocuments().get(0);
+                    handleUserDocument(documentSnapshot, callback);
+                })
+                .addOnFailureListener(e ->
+                        callback.onFailure("Không thể tìm tài khoản: " + e.getMessage()));
+    }
+
+    /**
      * Cập nhật họ tên và bio trong hồ sơ cá nhân.
+     *
+     * Hàm này dùng trong EditProfileActivity.
      *
      * @param userId mã người dùng hiện tại
      * @param fullName họ tên mới
@@ -133,6 +174,9 @@ public class UserRepository {
 
     /**
      * Chuyển DocumentSnapshot thành User object.
+     *
+     * Hàm này dùng chung cho getUserById() và getUserByUsername()
+     * để tránh lặp code xử lý document Firestore.
      *
      * @param documentSnapshot dữ liệu document từ Firestore
      * @param callback callback trả kết quả
