@@ -1,15 +1,16 @@
 <?xml version="1.0" encoding="utf-8"?>
 
 <!--
-    Màn hình hồ sơ cá nhân của ứng dụng MomentShare.
+    Layout màn hình hồ sơ cá nhân của ứng dụng MomentShare.
+
     File này thuộc phần Người 1 - Tài khoản, hồ sơ cá nhân.
 
     Chức năng:
-    - Hiển thị avatar người dùng.
+    - Hiển thị avatar.
     - Hiển thị họ tên, username, email và bio.
-    - Hiển thị thống kê cơ bản: số bạn bè, ảnh đã gửi, ảnh đã nhận.
+    - Hiển thị số bạn bè, số ảnh đã gửi và số ảnh đã nhận.
     - Cho phép chuyển sang màn hình chỉnh sửa hồ sơ.
-    - Cho phép đăng xuất khỏi tài khoản hiện tại.
+    - Cho phép đăng xuất tài khoản hiện tại.
 -->
 <ScrollView xmlns:android="http://schemas.android.com/apk/res/android"
     android:layout_width="match_parent"
@@ -20,29 +21,31 @@
     <LinearLayout
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
+        android:gravity="center_horizontal"
         android:orientation="vertical"
         android:padding="24dp">
 
-        <!-- Tiêu đề màn hình -->
+        <!-- Tiêu đề màn hình hồ sơ -->
         <TextView
             android:id="@+id/txtProfileTitle"
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
+            android:layout_marginTop="32dp"
+            android:gravity="center"
             android:text="Hồ sơ cá nhân"
-            android:textAlignment="center"
             android:textColor="#222222"
-            android:textSize="26sp"
+            android:textSize="28sp"
             android:textStyle="bold" />
 
-        <!-- Avatar tạm thời của người dùng -->
+        <!-- Avatar người dùng, tạm dùng icon mặc định của app -->
         <ImageView
             android:id="@+id/imgAvatar"
-            android:layout_width="120dp"
-            android:layout_height="120dp"
-            android:layout_gravity="center_horizontal"
-            android:layout_marginTop="28dp"
-            android:contentDescription="Ảnh đại diện"
-            android:src="@mipmap/ic_launcher_round" />
+            android:layout_width="96dp"
+            android:layout_height="96dp"
+            android:layout_gravity="center"
+            android:layout_marginTop="24dp"
+            android:contentDescription="Avatar người dùng"
+            android:src="@mipmap/ic_launcher" />
 
         <!-- Họ tên người dùng -->
         <TextView
@@ -50,8 +53,8 @@
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
             android:layout_marginTop="20dp"
-            android:text="Họ tên người dùng"
-            android:textAlignment="center"
+            android:gravity="center"
+            android:text="Người dùng MomentShare"
             android:textColor="#222222"
             android:textSize="22sp"
             android:textStyle="bold" />
@@ -62,137 +65,91 @@
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
             android:layout_marginTop="6dp"
+            android:gravity="center"
             android:text="@username"
-            android:textAlignment="center"
             android:textColor="#777777"
             android:textSize="15sp" />
 
-        <!-- Email người dùng -->
+        <!-- Email đăng nhập -->
         <TextView
             android:id="@+id/txtEmail"
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
             android:layout_marginTop="6dp"
+            android:gravity="center"
             android:text="email@example.com"
-            android:textAlignment="center"
             android:textColor="#777777"
             android:textSize="15sp" />
 
-        <!-- Bio / mô tả cá nhân -->
+        <!-- Bio/mô tả cá nhân -->
         <TextView
             android:id="@+id/txtBio"
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
             android:layout_marginTop="18dp"
-            android:background="#F5F5F5"
-            android:padding="14dp"
+            android:gravity="center"
             android:text="Chưa có mô tả cá nhân"
-            android:textAlignment="center"
             android:textColor="#444444"
-            android:textSize="14sp" />
+            android:textSize="15sp" />
 
-        <!-- Khu vực thống kê cơ bản.
-             Các số liệu này có thể nối dữ liệu thật sau khi module Friends và Moment hoàn thành.
-        -->
+        <!-- Khu vực thống kê cơ bản -->
         <LinearLayout
+            android:id="@+id/layoutStatistics"
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
-            android:layout_marginTop="24dp"
-            android:orientation="horizontal"
-            android:weightSum="3">
+            android:layout_marginTop="28dp"
+            android:gravity="center"
+            android:orientation="horizontal">
 
-            <!-- Số bạn bè -->
-            <LinearLayout
+            <!-- Số bạn bè, sẽ cập nhật thật khi module Friends hoàn thiện -->
+            <TextView
+                android:id="@+id/txtFriendCount"
                 android:layout_width="0dp"
                 android:layout_height="wrap_content"
                 android:layout_weight="1"
                 android:gravity="center"
-                android:orientation="vertical">
+                android:text="0 bạn bè"
+                android:textColor="#222222"
+                android:textSize="14sp"
+                android:textStyle="bold" />
 
-                <TextView
-                    android:id="@+id/txtFriendCount"
-                    android:layout_width="wrap_content"
-                    android:layout_height="wrap_content"
-                    android:text="0"
-                    android:textColor="#222222"
-                    android:textSize="20sp"
-                    android:textStyle="bold" />
-
-                <TextView
-                    android:layout_width="wrap_content"
-                    android:layout_height="wrap_content"
-                    android:text="Bạn bè"
-                    android:textColor="#777777"
-                    android:textSize="13sp" />
-            </LinearLayout>
-
-            <!-- Số ảnh đã gửi -->
-            <LinearLayout
+            <!-- Số ảnh đã gửi, sẽ cập nhật thật khi module Moments hoàn thiện -->
+            <TextView
+                android:id="@+id/txtSentCount"
                 android:layout_width="0dp"
                 android:layout_height="wrap_content"
                 android:layout_weight="1"
                 android:gravity="center"
-                android:orientation="vertical">
+                android:text="0 ảnh đã gửi"
+                android:textColor="#222222"
+                android:textSize="14sp"
+                android:textStyle="bold" />
 
-                <TextView
-                    android:id="@+id/txtSentCount"
-                    android:layout_width="wrap_content"
-                    android:layout_height="wrap_content"
-                    android:text="0"
-                    android:textColor="#222222"
-                    android:textSize="20sp"
-                    android:textStyle="bold" />
-
-                <TextView
-                    android:layout_width="wrap_content"
-                    android:layout_height="wrap_content"
-                    android:text="Đã gửi"
-                    android:textColor="#777777"
-                    android:textSize="13sp" />
-            </LinearLayout>
-
-            <!-- Số ảnh đã nhận -->
-            <LinearLayout
+            <!-- Số ảnh đã nhận, sẽ cập nhật thật khi module Feed/History hoàn thiện -->
+            <TextView
+                android:id="@+id/txtReceivedCount"
                 android:layout_width="0dp"
                 android:layout_height="wrap_content"
                 android:layout_weight="1"
                 android:gravity="center"
-                android:orientation="vertical">
-
-                <TextView
-                    android:id="@+id/txtReceivedCount"
-                    android:layout_width="wrap_content"
-                    android:layout_height="wrap_content"
-                    android:text="0"
-                    android:textColor="#222222"
-                    android:textSize="20sp"
-                    android:textStyle="bold" />
-
-                <TextView
-                    android:layout_width="wrap_content"
-                    android:layout_height="wrap_content"
-                    android:text="Đã nhận"
-                    android:textColor="#777777"
-                    android:textSize="13sp" />
-            </LinearLayout>
+                android:text="0 ảnh đã nhận"
+                android:textColor="#222222"
+                android:textSize="14sp"
+                android:textStyle="bold" />
 
         </LinearLayout>
 
-        <!--
-            Nút chuyển sang màn hình chỉnh sửa hồ sơ.
-            ID này phải trùng với ProfileActivity.java:
-            findViewById(R.id.btnEditProfile)
-        -->
+        <!-- Nút chuyển sang màn hình chỉnh sửa hồ sơ -->
         <Button
             android:id="@+id/btnEditProfile"
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
-            android:layout_marginTop="32dp"
+            android:layout_marginTop="28dp"
             android:minHeight="50dp"
             android:text="Chỉnh sửa hồ sơ"
             android:textAllCaps="false" />
 
-        <!-- Nút đăng xuất khỏi tài khoản hiện tại -->
+        <!-- Nút đăng xuất tài khoản -->
         <Button
             android:id="@+id/btnLogout"
             android:layout_width="match_parent"
