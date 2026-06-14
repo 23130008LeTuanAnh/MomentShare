@@ -3,11 +3,13 @@ package com.example.momentshare.activity;
 import android.content.Intent;
 import android.os.Bundle;
 import android.widget.Button;
+import android.widget.ImageView;
 import android.widget.TextView;
 import android.widget.Toast;
 
 import androidx.appcompat.app.AppCompatActivity;
 
+import com.bumptech.glide.Glide;
 import com.example.momentshare.R;
 import com.example.momentshare.model.User;
 import com.example.momentshare.repository.AuthManager;
@@ -23,12 +25,14 @@ import com.example.momentshare.util.ValidationUtils;
  * - Kiểm tra người dùng đã đăng nhập hay chưa.
  * - Lấy userId hiện tại từ Firebase Authentication.
  * - Tải dữ liệu người dùng từ Firestore collection users.
- * - Hiển thị họ tên, username, email, bio.
+ * - Hiển thị avatar, họ tên, username, email, bio.
  * - Hiển thị thống kê cơ bản: số bạn bè, số ảnh đã gửi, số ảnh đã nhận.
  * - Chuyển sang EditProfileActivity để chỉnh sửa hồ sơ.
  * - Đăng xuất tài khoản hiện tại.
  */
 public class ProfileActivity extends AppCompatActivity {
+
+    private ImageView imgAvatar;
 
     private TextView txtFullName;
     private TextView txtUsername;
@@ -71,6 +75,8 @@ public class ProfileActivity extends AppCompatActivity {
      * Ánh xạ các view từ file activity_profile.xml.
      */
     private void initViews() {
+        imgAvatar = findViewById(R.id.imgAvatar);
+
         txtFullName = findViewById(R.id.txtFullName);
         txtUsername = findViewById(R.id.txtUsername);
         txtEmail = findViewById(R.id.txtEmail);
@@ -148,11 +154,25 @@ public class ProfileActivity extends AppCompatActivity {
         String username = user.getUsername();
         String email = user.getEmail();
         String bio = user.getBio();
+        String avatarUrl = user.getAvatarUrl();
 
         txtFullName.setText(ValidationUtils.isEmpty(fullName) ? "Người dùng MomentShare" : fullName);
         txtUsername.setText(ValidationUtils.isEmpty(username) ? "@username" : "@" + username);
         txtEmail.setText(ValidationUtils.isEmpty(email) ? "Chưa có email" : email);
         txtBio.setText(ValidationUtils.isEmpty(bio) ? "Chưa có mô tả cá nhân" : bio);
+
+        // Hiển thị avatar từ Firestore avatarUrl.
+        // Nếu người dùng chưa có avatarUrl thì hiển thị icon mặc định.
+        if (!ValidationUtils.isEmpty(avatarUrl)) {
+            Glide.with(ProfileActivity.this)
+                    .load(avatarUrl)
+                    .placeholder(R.mipmap.ic_launcher)
+                    .error(R.mipmap.ic_launcher)
+                    .circleCrop()
+                    .into(imgAvatar);
+        } else {
+            imgAvatar.setImageResource(R.mipmap.ic_launcher);
+        }
 
         // Các chỉ số này sẽ được cập nhật thật khi nhóm hoàn thiện module Friends và Moments.
         txtFriendCount.setText("0 bạn bè");
@@ -164,6 +184,8 @@ public class ProfileActivity extends AppCompatActivity {
      * Hiển thị trạng thái đang tải hồ sơ.
      */
     private void showLoadingText() {
+        imgAvatar.setImageResource(R.mipmap.ic_launcher);
+
         txtFullName.setText("Đang tải hồ sơ...");
         txtUsername.setText("@...");
         txtEmail.setText("...");
