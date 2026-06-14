@@ -1,7 +1,8 @@
 <?xml version="1.0" encoding="utf-8"?>
 
 <!--
-    Màn hình đăng nhập của ứng dụng MomentShare.
+    Layout màn hình đăng nhập của ứng dụng MomentShare.
+
     File này thuộc phần Người 1 - Tài khoản, hồ sơ cá nhân.
 
     Chức năng:
@@ -9,6 +10,7 @@
     - Nhập mật khẩu.
     - Bấm nút đăng nhập.
     - Chuyển sang màn hình đăng ký nếu chưa có tài khoản.
+    - Hiển thị ProgressBar khi đang xử lý đăng nhập Firebase.
 -->
 <ScrollView xmlns:android="http://schemas.android.com/apk/res/android"
     android:layout_width="match_parent"
@@ -23,26 +25,26 @@
         android:orientation="vertical"
         android:padding="24dp">
 
-        <!-- Tên ứng dụng -->
+        <!-- Tiêu đề màn hình đăng nhập -->
         <TextView
-            android:id="@+id/txtAppName"
+            android:id="@+id/txtLoginTitle"
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
-            android:layout_marginTop="60dp"
-            android:text="MomentShare"
-            android:textAlignment="center"
+            android:layout_marginTop="56dp"
+            android:gravity="center"
+            android:text="Đăng nhập"
             android:textColor="#222222"
-            android:textSize="32sp"
+            android:textSize="28sp"
             android:textStyle="bold" />
 
-        <!-- Mô tả ngắn màn hình đăng nhập -->
+        <!-- Mô tả ngắn -->
         <TextView
             android:id="@+id/txtLoginSubtitle"
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
             android:layout_marginTop="8dp"
-            android:text="Đăng nhập để chia sẻ khoảnh khắc với bạn bè"
-            android:textAlignment="center"
+            android:gravity="center"
+            android:text="Chào mừng bạn quay lại MomentShare"
             android:textColor="#777777"
             android:textSize="14sp" />
 
@@ -51,7 +53,7 @@
             android:id="@+id/edtAccount"
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
-            android:layout_marginTop="40dp"
+            android:layout_marginTop="32dp"
             android:background="@android:drawable/edit_text"
             android:hint="Email hoặc username"
             android:inputType="textEmailAddress"
@@ -65,7 +67,7 @@
             android:id="@+id/edtPassword"
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
-            android:layout_marginTop="16dp"
+            android:layout_marginTop="14dp"
             android:background="@android:drawable/edit_text"
             android:hint="Mật khẩu"
             android:inputType="textPassword"
@@ -74,7 +76,7 @@
             android:textColor="#222222"
             android:textColorHint="#999999" />
 
-        <!-- ProgressBar hiển thị khi đang xử lý đăng nhập -->
+        <!-- ProgressBar hiển thị khi đang đăng nhập Firebase -->
         <ProgressBar
             android:id="@+id/progressBar"
             android:layout_width="wrap_content"
@@ -82,11 +84,7 @@
             android:layout_marginTop="20dp"
             android:visibility="gone" />
 
-        <!--
-            Nút đăng nhập.
-            ID này phải trùng với LoginActivity.java:
-            findViewById(R.id.btnLogin)
-        -->
+        <!-- Nút đăng nhập -->
         <Button
             android:id="@+id/btnLogin"
             android:layout_width="match_parent"
@@ -102,10 +100,10 @@
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
             android:layout_marginTop="18dp"
-            android:text="Chưa có tài khoản? Đăng ký ngay"
-            android:textAlignment="center"
+            android:gravity="center"
+            android:text="Chưa có tài khoản? Đăng ký"
             android:textColor="#1976D2"
-            android:textSize="14sp" />
+            android:textSize="15sp" />
 
     </LinearLayout>
 
