@@ -47,10 +47,18 @@
             </intent-filter>
         </activity>
 
+        <!-- Các màn hình thuộc module Người 3: Camera và gửi khoảnh khắc. -->
         <activity android:name=".activity.CameraActivity" />
         <activity android:name=".activity.PreviewMomentActivity" />
         <activity android:name=".activity.SelectFriendToSendActivity" />
         <activity android:name=".activity.SendMomentActivity" />
+
+        <!-- Người 5 thêm: các màn hình Notification, Admin, Reports và Statistics. -->
+        <activity android:name=".activity.NotificationActivity" />
+        <activity android:name=".activity.AdminDashboardActivity" />
+        <activity android:name=".activity.UserManagementActivity" />
+        <activity android:name=".activity.ReportManagementActivity" />
+        <activity android:name=".activity.StatisticsActivity" />
 
     </application>
 </manifest>
