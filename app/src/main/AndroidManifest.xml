@@ -12,6 +12,9 @@
         Cần cho Firebase Authentication và Cloud Firestore.
     -->
     <uses-permission android:name="android.permission.INTERNET" />
+    <uses-permission android:name="android.permission.CAMERA" />
+
+    <uses-feature android:name="android.hardware.camera" android:required="false" />
 
     <application
         android:allowBackup="true"
@@ -44,6 +47,10 @@
             </intent-filter>
         </activity>
 
-    </application>
+        <activity android:name=".activity.CameraActivity" />
+        <activity android:name=".activity.PreviewMomentActivity" />
+        <activity android:name=".activity.SelectFriendToSendActivity" />
+        <activity android:name=".activity.SendMomentActivity" />
 
+    </application>
 </manifest>
