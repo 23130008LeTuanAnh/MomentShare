@@ -4,12 +4,15 @@
     Layout màn hình hồ sơ cá nhân của ứng dụng MomentShare.
 
     File này thuộc phần Người 1 - Tài khoản, hồ sơ cá nhân.
+    Người 5 chỉ bổ sung nút Thông báo và nút Admin Dashboard để liên kết module Notification/Admin.
 
     Chức năng:
     - Hiển thị avatar.
     - Hiển thị họ tên, username, email và bio.
     - Hiển thị số bạn bè, số ảnh đã gửi và số ảnh đã nhận.
     - Cho phép chuyển sang màn hình chỉnh sửa hồ sơ.
+    - Cho phép mở màn hình thông báo. // Người 5 thêm
+    - Cho phép tài khoản ADMIN vào màn hình quản trị. // Người 5 thêm
     - Cho phép đăng xuất tài khoản hiện tại.
 -->
 <ScrollView xmlns:android="http://schemas.android.com/apk/res/android"
@@ -148,6 +151,27 @@
             android:minHeight="50dp"
             android:text="Chỉnh sửa hồ sơ"
             android:textAllCaps="false" />
+
+        <!-- Người 5 thêm: nút mở màn hình thông báo trong app -->
+        <Button
+            android:id="@+id/btnNotification"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="12dp"
+            android:minHeight="50dp"
+            android:text="Thông báo"
+            android:textAllCaps="false" />
+
+        <!-- Người 5 thêm: chỉ hiển thị bằng code nếu tài khoản có role ADMIN -->
+        <Button
+            android:id="@+id/btnAdminDashboard"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="12dp"
+            android:minHeight="50dp"
+            android:text="Admin Dashboard"
+            android:textAllCaps="false"
+            android:visibility="gone" />
 
         <!-- Nút đăng xuất tài khoản -->
         <Button
