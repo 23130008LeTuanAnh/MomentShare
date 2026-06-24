@@ -2,6 +2,7 @@ package com.example.momentshare.activity;
 
 import android.content.Intent;
 import android.os.Bundle;
+import android.view.View;
 import android.widget.Button;
 import android.widget.ImageView;
 import android.widget.TextView;
@@ -14,12 +15,14 @@ import com.example.momentshare.R;
 import com.example.momentshare.model.User;
 import com.example.momentshare.repository.AuthManager;
 import com.example.momentshare.repository.UserRepository;
+import com.example.momentshare.util.Constants;
 import com.example.momentshare.util.ValidationUtils;
 
 /**
  * ProfileActivity hiển thị hồ sơ cá nhân của người dùng.
  *
  * File này thuộc phần Người 1 - Tài khoản, hồ sơ cá nhân.
+ * Người 5 chỉ bổ sung lối vào màn hình thông báo và khu vực quản trị, không thay đổi luồng hồ sơ gốc.
  *
  * Chức năng chính:
  * - Kiểm tra người dùng đã đăng nhập hay chưa.
@@ -28,6 +31,8 @@ import com.example.momentshare.util.ValidationUtils;
  * - Hiển thị avatar, họ tên, username, email, bio.
  * - Hiển thị thống kê cơ bản: số bạn bè, số ảnh đã gửi, số ảnh đã nhận.
  * - Chuyển sang EditProfileActivity để chỉnh sửa hồ sơ.
+ * - Mở NotificationActivity để người dùng xem thông báo trong app. // Người 5 thêm
+ * - Hiển thị nút Admin Dashboard nếu tài khoản hiện tại có role ADMIN. // Người 5 thêm
  * - Đăng xuất tài khoản hiện tại.
  */
 public class ProfileActivity extends AppCompatActivity {
@@ -43,6 +48,8 @@ public class ProfileActivity extends AppCompatActivity {
     private TextView txtReceivedCount;
 
     private Button btnEditProfile;
+    private Button btnNotification; // Người 5 thêm: nút mở danh sách thông báo.
+    private Button btnAdminDashboard; // Người 5 thêm: nút vào khu vực quản trị cho tài khoản ADMIN.
     private Button btnLogout;
 
     private AuthManager authManager;
@@ -86,6 +93,8 @@ public class ProfileActivity extends AppCompatActivity {
         txtReceivedCount = findViewById(R.id.txtReceivedCount);
 
         btnEditProfile = findViewById(R.id.btnEditProfile);
+        btnNotification = findViewById(R.id.btnNotification); // Người 5 thêm
+        btnAdminDashboard = findViewById(R.id.btnAdminDashboard); // Người 5 thêm
         btnLogout = findViewById(R.id.btnLogout);
     }
 
@@ -95,6 +104,18 @@ public class ProfileActivity extends AppCompatActivity {
     private void setupEvents() {
         btnEditProfile.setOnClickListener(v -> {
             Intent intent = new Intent(ProfileActivity.this, EditProfileActivity.class);
+            startActivity(intent);
+        });
+
+        // Người 5 thêm: mở màn hình thông báo cá nhân.
+        btnNotification.setOnClickListener(v -> {
+            Intent intent = new Intent(ProfileActivity.this, NotificationActivity.class);
+            startActivity(intent);
+        });
+
+        // Người 5 thêm: mở trang quản trị, Activity bên trong sẽ kiểm tra lại quyền ADMIN.
+        btnAdminDashboard.setOnClickListener(v -> {
+            Intent intent = new Intent(ProfileActivity.this, AdminDashboardActivity.class);
             startActivity(intent);
         });
 
@@ -174,6 +195,9 @@ public class ProfileActivity extends AppCompatActivity {
             imgAvatar.setImageResource(R.mipmap.ic_launcher);
         }
 
+        // Người 5 thêm: chỉ hiện nút Admin Dashboard cho tài khoản có role ADMIN.
+        btnAdminDashboard.setVisibility(Constants.ROLE_ADMIN.equals(user.getRole()) ? View.VISIBLE : View.GONE);
+
         // Các chỉ số này sẽ được cập nhật thật khi nhóm hoàn thiện module Friends và Moments.
         txtFriendCount.setText("0 bạn bè");
         txtSentCount.setText("0 ảnh đã gửi");
@@ -193,6 +217,9 @@ public class ProfileActivity extends AppCompatActivity {
         txtFriendCount.setText("0 bạn bè");
         txtSentCount.setText("0 ảnh đã gửi");
         txtReceivedCount.setText("0 ảnh đã nhận");
+
+        // Người 5 thêm: ẩn nút admin trong lúc chưa xác định được quyền của tài khoản.
+        btnAdminDashboard.setVisibility(View.GONE);
     }
 
     /**
