@@ -2,48 +2,41 @@ package com.example.momentshare.util;
 
 /**
  * Constants lưu các hằng số dùng chung trong ứng dụng MomentShare.
- *
- * Mục đích:
- * - Tránh viết sai tên collection Firestore.
- * - Quản lý thống nhất role và trạng thái tài khoản.
- * - Dễ bảo trì khi các module khác cần dùng chung.
+ * File này thuộc phần Người 5 - Database, Notification và Admin.
+ * Các tên collection và trạng thái được gom lại để tránh viết sai khi nhiều module cùng dùng.
  */
 public class Constants {
 
-    /**
-     * Collection lưu thông tin người dùng trong Cloud Firestore.
-     */
     public static final String COLLECTION_USERS = "users";
+    public static final String COLLECTION_FRIENDS = "friends";
+    public static final String COLLECTION_FRIEND_REQUESTS = "friend_requests";
+    public static final String COLLECTION_MOMENTS = "moments";
+    public static final String COLLECTION_MOMENT_RECEIVERS = "moment_receivers";
+    public static final String COLLECTION_REACTIONS = "reactions";
+    public static final String COLLECTION_NOTIFICATIONS = "notifications";
+    public static final String COLLECTION_REPORTS = "reports";
 
-    /**
-     * Vai trò người dùng thường.
-     */
     public static final String ROLE_USER = "USER";
-
-    /**
-     * Vai trò quản trị viên.
-     */
     public static final String ROLE_ADMIN = "ADMIN";
 
-    /**
-     * Trạng thái tài khoản đang hoạt động.
-     */
     public static final String STATUS_ACTIVE = "active";
-
-    /**
-     * Trạng thái tài khoản bị khóa.
-     */
     public static final String STATUS_LOCKED = "locked";
 
-    /**
-     * Avatar mặc định tạm thời.
-     * Sau này có thể thay bằng URL ảnh mặc định trên Firebase Storage.
-     */
+    public static final String MOMENT_STATUS_ACTIVE = "active";
+    public static final String MOMENT_STATUS_HIDDEN = "hidden";
+    public static final String MOMENT_STATUS_DELETED = "deleted";
+
+    public static final String REPORT_STATUS_PENDING = "pending";
+    public static final String REPORT_STATUS_RESOLVED = "resolved";
+    public static final String REPORT_STATUS_IGNORED = "ignored";
+
+    public static final String NOTIFICATION_TYPE_MOMENT = "moment";
+    public static final String NOTIFICATION_TYPE_FRIEND_REQUEST = "friend_request";
+    public static final String NOTIFICATION_TYPE_REACTION = "reaction";
+    public static final String NOTIFICATION_TYPE_REPORT = "report";
+
     public static final String DEFAULT_AVATAR_URL = "";
 
-    /**
-     * Constructor private để không cho tạo object Constants.
-     */
     private Constants() {
     }
 }
