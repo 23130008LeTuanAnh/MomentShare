@@ -3,6 +3,7 @@ package com.example.momentshare.repository;
 import android.net.Uri;
 
 import androidx.annotation.NonNull;
+import androidx.annotation.Nullable;
 
 import com.example.momentshare.model.FriendUser;
 import com.example.momentshare.model.Moment;
@@ -13,7 +14,9 @@ import com.example.momentshare.util.Constants;
 import com.example.momentshare.util.UploadImageHelper;
 import com.google.firebase.Timestamp;
 import com.google.firebase.firestore.DocumentReference;
+import com.google.firebase.firestore.DocumentSnapshot;
 import com.google.firebase.firestore.FirebaseFirestore;
+import com.google.firebase.firestore.Query;
 import com.google.firebase.firestore.QueryDocumentSnapshot;
 
 import java.util.ArrayList;
@@ -44,11 +47,28 @@ public class MomentRepository {
         void onSuccess(@NonNull Set<String> ids);
         void onFailure(@NonNull String errorMessage);
     }
+    public interface MomentListCallback {
+        void onSuccess(List<Moment> moments);
+        void onError(Exception exception);
+    }
+
+    public interface MomentCallback {
+        void onSuccess(@Nullable Moment moment);
+        void onError(Exception exception);
+    }
+
 
     private static final String COLLECTION_FRIENDS = "friends";
     private static final String COLLECTION_MOMENTS = "moments";
     private static final String COLLECTION_MOMENT_RECEIVERS = "moment_receivers";
     private static final String COLLECTION_NOTIFICATIONS = "notifications";
+    private static final String FIELD_SENDER_ID = "senderId";
+    private static final String FIELD_RECEIVER_ID = "receiverId";
+    private static final String FIELD_MOMENT_ID = "momentId";
+    private static final String FIELD_CREATED_AT = "createdAt";
+    private static final String FIELD_STATUS = "status";
+    private static final String STATUS_ACTIVE = "active";
+    private static final int DEFAULT_LIMIT = 30;
 
     private final FirebaseFirestore db;
     private final UploadImageHelper uploadImageHelper;
@@ -264,5 +284,103 @@ public class MomentRepository {
                 .addOnSuccessListener(unused -> callback.onSuccess(momentId))
                 .addOnFailureListener(e ->
                         callback.onFailure("Không thể lưu khoảnh khắc: " + e.getMessage()));
+    }
+    public void getHomeFeed(@NonNull String currentUserId, @NonNull MomentListCallback callback) {
+        db.collection(COLLECTION_MOMENT_RECEIVERS)
+                .whereEqualTo(FIELD_RECEIVER_ID, currentUserId)
+                .limit(DEFAULT_LIMIT)
+                .get()
+                .addOnSuccessListener(snapshot -> {
+                    List<String> momentIds = new ArrayList<>();
+                    for (DocumentSnapshot document : snapshot.getDocuments()) {
+                        String momentId = document.getString(FIELD_MOMENT_ID);
+                        if (momentId != null && !momentId.isEmpty()) {
+                            momentIds.add(momentId);
+                        }
+                    }
+                    loadMomentsByIds(momentIds, callback);
+                })
+                .addOnFailureListener(callback::onError);
+    }
+
+    public void getSentHistory(@NonNull String currentUserId, @NonNull MomentListCallback callback) {
+        db.collection(COLLECTION_MOMENTS)
+                .whereEqualTo(FIELD_SENDER_ID, currentUserId)
+                .whereEqualTo(FIELD_STATUS, STATUS_ACTIVE)
+                .orderBy(FIELD_CREATED_AT, Query.Direction.DESCENDING)
+                .limit(DEFAULT_LIMIT)
+                .get()
+                .addOnSuccessListener(snapshot -> callback.onSuccess(mapMomentList(snapshot.getDocuments())))
+                .addOnFailureListener(callback::onError);
+    }
+
+    public void getReceivedHistory(@NonNull String currentUserId, @NonNull MomentListCallback callback) {
+        getHomeFeed(currentUserId, callback);
+    }
+
+    public void getMomentById(@NonNull String momentId, @NonNull MomentCallback callback) {
+        db.collection(COLLECTION_MOMENTS)
+                .document(momentId)
+                .get()
+                .addOnSuccessListener(document -> {
+                    if (!document.exists()) {
+                        callback.onSuccess(null);
+                        return;
+                    }
+                    callback.onSuccess(mapMoment(document));
+                })
+                .addOnFailureListener(callback::onError);
+    }
+
+    private void loadMomentsByIds(List<String> momentIds, MomentListCallback callback) {
+        if (momentIds.isEmpty()) {
+            callback.onSuccess(new ArrayList<>());
+            return;
+        }
+
+        List<Moment> result = new ArrayList<>();
+        final int[] completedCount = {0};
+        final boolean[] failed = {false};
+
+        for (String momentId : momentIds) {
+            db.collection(COLLECTION_MOMENTS)
+                    .document(momentId)
+                    .get()
+                    .addOnSuccessListener(document -> {
+                        if (failed[0]) return;
+                        Moment moment = mapMoment(document);
+                        if (moment != null && STATUS_ACTIVE.equals(moment.getStatus())) {
+                            result.add(moment);
+                        }
+                        completedCount[0]++;
+                        if (completedCount[0] == momentIds.size()) {
+                            callback.onSuccess(result);
+                        }
+                    })
+                    .addOnFailureListener(exception -> {
+                        if (!failed[0]) {
+                            failed[0] = true;
+                            callback.onError(exception);
+                        }
+                    });
+        }
+    }
+    private List<Moment> mapMomentList(List<DocumentSnapshot> documents) {
+        List<Moment> moments = new ArrayList<>();
+        for (DocumentSnapshot document : documents) {
+            Moment moment = mapMoment(document);
+            if (moment != null) moments.add(moment);
+        }
+        return moments;
+    }
+
+    @Nullable
+    private Moment mapMoment(DocumentSnapshot document) {
+        if (document == null || !document.exists()) return null;
+        Moment moment = document.toObject(Moment.class);
+        if (moment != null && (moment.getMomentId() == null || moment.getMomentId().isEmpty())) {
+            moment.setMomentId(document.getId());
+        }
+        return moment;
     }
 }
