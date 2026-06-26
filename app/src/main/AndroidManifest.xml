@@ -53,6 +53,10 @@
         <activity android:name=".activity.SelectFriendToSendActivity" />
         <activity android:name=".activity.SendMomentActivity" />
 
+        <activity android:name=".activity.HomeFeedActivity" />
+        <activity android:name=".activity.MomentDetailActivity" />
+        <activity android:name=".activity.HistoryActivity" />
+
         <!-- Người 5 thêm: các màn hình Notification, Admin, Reports và Statistics. -->
         <activity android:name=".activity.NotificationActivity" />
         <activity android:name=".activity.AdminDashboardActivity" />
