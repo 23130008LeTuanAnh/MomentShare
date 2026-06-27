@@ -1,0 +1,95 @@
+package com.example.momentshare.activity;
+
+import android.os.Bundle;
+import android.view.View;
+import android.widget.ImageButton;
+import android.widget.ProgressBar;
+import android.widget.TextView;
+import android.widget.Toast;
+
+import androidx.appcompat.app.AppCompatActivity;
+import androidx.recyclerview.widget.LinearLayoutManager;
+import androidx.recyclerview.widget.RecyclerView;
+
+import com.example.momentshare.R;
+import com.example.momentshare.model.FriendRequest;
+import com.example.momentshare.repository.FriendRepository;
+import com.google.firebase.auth.FirebaseAuth;
+
+import java.util.ArrayList;
+import java.util.List;
+
+public class FriendRequestActivity extends AppCompatActivity {
+
+    private ImageButton btnBack;
+    private ProgressBar progressBar;
+    private TextView txtNoRequest;
+    private RecyclerView rvRequest;
+
+    private FriendRequestAdapter adapter;
+    private final List<FriendRequest> requestList = new ArrayList<>();
+    private FriendRepository friendRepository;
+    private String currentUserId;
+
+    @Override
+    protected void onCreate(Bundle savedInstanceState) {
+        super.onCreate(savedInstanceState);
+        setContentView(R.layout.activity_friend_request);
+
+        currentUserId = FirebaseAuth.getInstance().getCurrentUser() != null ?
+                FirebaseAuth.getInstance().getCurrentUser().getUid() : "";
+        
+        if (currentUserId.isEmpty()) {
+            finish();
+            return;
+        }
+
+        friendRepository = new FriendRepository();
+        initViews();
+        loadRequests();
+    }
+
+    private void initViews() {
+        btnBack = findViewById(R.id.btnBackRequest);
+        progressBar = findViewById(R.id.progressBarRequest);
+        txtNoRequest = findViewById(R.id.txtNoRequest);
+        rvRequest = findViewById(R.id.rvFriendRequest);
+
+        rvRequest.setLayoutManager(new LinearLayoutManager(this));
+        adapter = new FriendRequestAdapter(this, requestList);
+        rvRequest.setAdapter(adapter);
+
+        btnBack.setOnClickListener(v -> finish());
+    }
+
+    private void loadRequests() {
+        setLoading(true);
+        friendRepository.getPendingRequests(currentUserId, new FriendRepository.RequestListCallback() {
+            @Override
+            public void onSuccess(List<FriendRequest> requests) {
+                setLoading(false);
+                requestList.clear();
+                requestList.addAll(requests);
+                adapter.notifyDataSetChanged();
+
+                if (requests.isEmpty()) {
+                    txtNoRequest.setVisibility(View.VISIBLE);
+                } else {
+                    txtNoRequest.setVisibility(View.GONE);
+                }
+            }
+
+            @Override
+            public void onFailure(String errorMessage) {
+                setLoading(false);
+                Toast.makeText(FriendRequestActivity.this, "Lỗi: " + errorMessage, Toast.LENGTH_SHORT).show();
+            }
+        });
+    }
+
+    private void setLoading(boolean isLoading) {
+        progressBar.setVisibility(isLoading ? View.VISIBLE : View.GONE);
+        rvRequest.setVisibility(isLoading ? View.GONE : View.VISIBLE);
+        txtNoRequest.setVisibility(View.GONE);
+    }
+}

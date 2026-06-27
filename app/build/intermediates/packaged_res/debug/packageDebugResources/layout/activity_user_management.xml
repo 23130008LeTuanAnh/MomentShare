@@ -1,0 +1,59 @@
+<?xml version="1.0" encoding="utf-8"?>
+
+<!--
+    Người 5 thêm: layout quản lý người dùng cho Admin.
+    Admin nhấn vào tài khoản để khóa/mở khóa hoặc đổi quyền.
+-->
+<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    android:layout_width="match_parent"
+    android:layout_height="match_parent"
+    android:background="#F5F7FB"
+    android:orientation="vertical"
+    android:padding="20dp">
+
+    <TextView
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:layout_marginTop="24dp"
+        android:text="Quản lý người dùng"
+        android:textColor="#111827"
+        android:textSize="26sp"
+        android:textStyle="bold" />
+
+    <TextView
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:layout_marginTop="6dp"
+        android:text="Nhấn vào một tài khoản để khóa/mở khóa hoặc đổi quyền."
+        android:textColor="#6B7280"
+        android:textSize="14sp" />
+
+    <ProgressBar
+        android:id="@+id/progressBar"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:layout_gravity="center_horizontal"
+        android:layout_marginTop="14dp"
+        android:visibility="gone" />
+
+    <TextView
+        android:id="@+id/txtEmptyUsers"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:layout_marginTop="24dp"
+        android:gravity="center"
+        android:text="Chưa có người dùng"
+        android:textColor="#6B7280"
+        android:textSize="15sp"
+        android:visibility="gone" />
+
+    <ListView
+        android:id="@+id/listUsers"
+        android:layout_width="match_parent"
+        android:layout_height="0dp"
+        android:layout_marginTop="16dp"
+        android:layout_weight="1"
+        android:background="#FFFFFF"
+        android:divider="#E5E7EB"
+        android:dividerHeight="1dp" />
+</LinearLayout>

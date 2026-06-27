@@ -26,12 +26,19 @@ public class HistoryActivity extends AppCompatActivity implements HistoryAdapter
     private final List<Moment> historyMoments = new ArrayList<>();
     private HistoryAdapter historyAdapter;
     private MomentRepository momentRepository;
-
-    private String currentUserId = FirebaseAuth.getInstance().getCurrentUser().getUid();
+    private String currentUserId;
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
+
+        if (FirebaseAuth.getInstance().getCurrentUser() == null) {
+            Toast.makeText(this, "Vui lòng đăng nhập lại", Toast.LENGTH_SHORT).show();
+            finish();
+            return;
+        }
+        currentUserId = FirebaseAuth.getInstance().getCurrentUser().getUid();
+
         setContentView(R.layout.activity_history);
 
         ImageButton btnBack = findViewById(R.id.btnBackHistory);

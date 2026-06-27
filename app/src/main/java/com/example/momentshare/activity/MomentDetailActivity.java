@@ -42,12 +42,20 @@ public class MomentDetailActivity extends AppCompatActivity {
     private ReactionRepository reactionRepository;
 
     private String currentMomentId = "";
-    private String currentUserId = FirebaseAuth.getInstance().getCurrentUser().getUid();
+    private String currentUserId;
     private String selectedReaction = "";
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
+
+        if (FirebaseAuth.getInstance().getCurrentUser() == null) {
+            Toast.makeText(this, "Vui lòng đăng nhập lại", Toast.LENGTH_SHORT).show();
+            finish();
+            return;
+        }
+        currentUserId = FirebaseAuth.getInstance().getCurrentUser().getUid();
+
         setContentView(R.layout.activity_moment_detail);
 
         // Lấy ID của bức ảnh hiện tại để truy vấn

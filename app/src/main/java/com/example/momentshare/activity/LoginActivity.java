@@ -64,6 +64,8 @@ public class LoginActivity extends AppCompatActivity {
      * Khai báo các sự kiện bấm nút trên màn hình đăng nhập.
      */
     private void setupEvents() {
+        findViewById(R.id.btnBackLogin).setOnClickListener(v -> finish());
+
         btnLogin.setOnClickListener(v -> handleLogin());
 
         txtGoToRegister.setOnClickListener(v -> {

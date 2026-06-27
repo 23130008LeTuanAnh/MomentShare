@@ -152,6 +152,16 @@
             android:text="Chỉnh sửa hồ sơ"
             android:textAllCaps="false" />
 
+        <!-- Nút mở Home Feed (Người 2/3 thêm) -->
+        <Button
+            android:id="@+id/btnHomeFeed"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="12dp"
+            android:minHeight="50dp"
+            android:text="Trang chủ (Feed)"
+            android:textAllCaps="false" />
+
         <!-- Người 5 thêm: nút mở màn hình thông báo trong app -->
         <Button
             android:id="@+id/btnNotification"
@@ -160,6 +170,25 @@
             android:layout_marginTop="12dp"
             android:minHeight="50dp"
             android:text="Thông báo"
+            android:textAllCaps="false" />
+
+        <!-- Người 2 thêm: nút mở danh sách bạn bè và lời mời -->
+        <Button
+            android:id="@+id/btnFriendList"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="12dp"
+            android:minHeight="50dp"
+            android:text="Danh sách bạn bè"
+            android:textAllCaps="false" />
+
+        <Button
+            android:id="@+id/btnFriendRequests"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="12dp"
+            android:minHeight="50dp"
+            android:text="Lời mời kết bạn"
             android:textAllCaps="false" />
 
         <!-- Người 5 thêm: chỉ hiển thị bằng code nếu tài khoản có role ADMIN -->

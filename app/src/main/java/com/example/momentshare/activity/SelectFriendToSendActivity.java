@@ -56,6 +56,10 @@ public class SelectFriendToSendActivity extends AppCompatActivity {
         listFriends = findViewById(R.id.listFriendsToSend);
         txtEmpty = findViewById(R.id.txtEmptyFriends);
         btnContinue = findViewById(R.id.btnContinueSend);
+
+        androidx.appcompat.widget.Toolbar toolbar = findViewById(R.id.toolbarSelectFriend);
+        toolbar.setNavigationIcon(android.R.drawable.ic_media_previous);
+        toolbar.setNavigationOnClickListener(v -> finish());
     }
 
     private void readIntentData() {

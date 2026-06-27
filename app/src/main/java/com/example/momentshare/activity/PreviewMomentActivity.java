@@ -57,6 +57,8 @@ public class PreviewMomentActivity extends AppCompatActivity {
     }
 
     private void setupEvents() {
+        findViewById(R.id.btnBackPreview).setOnClickListener(v -> finish());
+
         btnRetake.setOnClickListener(v -> finish());
 
         btnNext.setOnClickListener(v -> {

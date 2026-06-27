@@ -10,6 +10,7 @@ import com.example.momentshare.util.Constants;
 import com.google.firebase.Timestamp;
 import com.google.firebase.firestore.FirebaseFirestore;
 import com.google.firebase.firestore.QueryDocumentSnapshot;
+import com.google.firebase.firestore.WriteBatch;
 
 import java.util.ArrayList;
 import java.util.Collections;
@@ -140,7 +141,7 @@ public class AdminRepository {
                                            @NonNull String momentId,
                                            @NonNull String handledBy,
                                            @NonNull ActionCallback callback) {
-        var batch = db.batch();
+        WriteBatch batch = db.batch();
 
         batch.update(
                 db.collection(Constants.COLLECTION_REPORTS).document(reportId),

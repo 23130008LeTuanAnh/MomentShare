@@ -28,6 +28,16 @@
             android:textStyle="bold" />
 
         <ImageButton
+            android:id="@+id/btnBackHome"
+            android:layout_width="48dp"
+            android:layout_height="48dp"
+            android:layout_gravity="start|center_vertical"
+            android:background="?attr/selectableItemBackgroundBorderless"
+            android:contentDescription="Quay lại"
+            android:padding="12dp"
+            android:src="@android:drawable/ic_media_previous" />
+
+        <ImageButton
             android:id="@+id/btnOpenHistory"
             android:layout_width="48dp"
             android:layout_height="48dp"

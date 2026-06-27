@@ -30,6 +30,7 @@ public class HomeFeedActivity extends AppCompatActivity implements MomentAdapter
 
         rvHomeFeed = findViewById(R.id.rvHomeFeed);
         ImageButton btnOpenHistory = findViewById(R.id.btnOpenHistory);
+        findViewById(R.id.btnBackHome).setOnClickListener(v -> finish());
 
         rvHomeFeed.setLayoutManager(new LinearLayoutManager(this));
         rvHomeFeed.setHasFixedSize(true);
@@ -50,6 +51,10 @@ public class HomeFeedActivity extends AppCompatActivity implements MomentAdapter
     }
 
     private void loadRealData() {
+        if (FirebaseAuth.getInstance().getCurrentUser() == null) {
+            Toast.makeText(this, "Vui lòng đăng nhập để xem dữ liệu", Toast.LENGTH_SHORT).show();
+            return;
+        }
         String currentUserId = FirebaseAuth.getInstance().getCurrentUser().getUid();
 
         momentRepository.getHomeFeed(currentUserId, new MomentRepository.MomentListCallback() {

@@ -1,0 +1,207 @@
+<?xml version="1.0" encoding="utf-8"?>
+
+<!--
+    Layout màn hình hồ sơ cá nhân của ứng dụng MomentShare.
+
+    File này thuộc phần Người 1 - Tài khoản, hồ sơ cá nhân.
+    Người 5 chỉ bổ sung nút Thông báo và nút Admin Dashboard để liên kết module Notification/Admin.
+
+    Chức năng:
+    - Hiển thị avatar.
+    - Hiển thị họ tên, username, email và bio.
+    - Hiển thị số bạn bè, số ảnh đã gửi và số ảnh đã nhận.
+    - Cho phép chuyển sang màn hình chỉnh sửa hồ sơ.
+    - Cho phép mở màn hình thông báo. // Người 5 thêm
+    - Cho phép tài khoản ADMIN vào màn hình quản trị. // Người 5 thêm
+    - Cho phép đăng xuất tài khoản hiện tại.
+-->
+<ScrollView xmlns:android="http://schemas.android.com/apk/res/android"
+    android:layout_width="match_parent"
+    android:layout_height="match_parent"
+    android:background="#FFFFFF"
+    android:fillViewport="true">
+
+    <LinearLayout
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:gravity="center_horizontal"
+        android:orientation="vertical"
+        android:padding="24dp">
+
+        <!-- Tiêu đề màn hình hồ sơ -->
+        <TextView
+            android:id="@+id/txtProfileTitle"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="32dp"
+            android:gravity="center"
+            android:text="Hồ sơ cá nhân"
+            android:textColor="#222222"
+            android:textSize="28sp"
+            android:textStyle="bold" />
+
+        <!-- Avatar người dùng, tạm dùng icon mặc định của app -->
+        <ImageView
+            android:id="@+id/imgAvatar"
+            android:layout_width="96dp"
+            android:layout_height="96dp"
+            android:layout_gravity="center"
+            android:layout_marginTop="24dp"
+            android:contentDescription="Avatar người dùng"
+            android:src="@mipmap/ic_launcher" />
+
+        <!-- Họ tên người dùng -->
+        <TextView
+            android:id="@+id/txtFullName"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="20dp"
+            android:gravity="center"
+            android:text="Người dùng MomentShare"
+            android:textColor="#222222"
+            android:textSize="22sp"
+            android:textStyle="bold" />
+
+        <!-- Username người dùng -->
+        <TextView
+            android:id="@+id/txtUsername"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="6dp"
+            android:gravity="center"
+            android:text="@username"
+            android:textColor="#777777"
+            android:textSize="15sp" />
+
+        <!-- Email đăng nhập -->
+        <TextView
+            android:id="@+id/txtEmail"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="6dp"
+            android:gravity="center"
+            android:text="email@example.com"
+            android:textColor="#777777"
+            android:textSize="15sp" />
+
+        <!-- Bio/mô tả cá nhân -->
+        <TextView
+            android:id="@+id/txtBio"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="18dp"
+            android:gravity="center"
+            android:text="Chưa có mô tả cá nhân"
+            android:textColor="#444444"
+            android:textSize="15sp" />
+
+        <!-- Khu vực thống kê cơ bản -->
+        <LinearLayout
+            android:id="@+id/layoutStatistics"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="28dp"
+            android:gravity="center"
+            android:orientation="horizontal">
+
+            <!-- Số bạn bè, sẽ cập nhật thật khi module Friends hoàn thiện -->
+            <TextView
+                android:id="@+id/txtFriendCount"
+                android:layout_width="0dp"
+                android:layout_height="wrap_content"
+                android:layout_weight="1"
+                android:gravity="center"
+                android:text="0 bạn bè"
+                android:textColor="#222222"
+                android:textSize="14sp"
+                android:textStyle="bold" />
+
+            <!-- Số ảnh đã gửi, sẽ cập nhật thật khi module Moments hoàn thiện -->
+            <TextView
+                android:id="@+id/txtSentCount"
+                android:layout_width="0dp"
+                android:layout_height="wrap_content"
+                android:layout_weight="1"
+                android:gravity="center"
+                android:text="0 ảnh đã gửi"
+                android:textColor="#222222"
+                android:textSize="14sp"
+                android:textStyle="bold" />
+
+            <!-- Số ảnh đã nhận, sẽ cập nhật thật khi module Feed/History hoàn thiện -->
+            <TextView
+                android:id="@+id/txtReceivedCount"
+                android:layout_width="0dp"
+                android:layout_height="wrap_content"
+                android:layout_weight="1"
+                android:gravity="center"
+                android:text="0 ảnh đã nhận"
+                android:textColor="#222222"
+                android:textSize="14sp"
+                android:textStyle="bold" />
+
+        </LinearLayout>
+
+        <!-- Nút chuyển sang màn hình chỉnh sửa hồ sơ -->
+        <Button
+            android:id="@+id/btnEditProfile"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="28dp"
+            android:minHeight="50dp"
+            android:text="Chỉnh sửa hồ sơ"
+            android:textAllCaps="false" />
+
+        <!-- Người 5 thêm: nút mở màn hình thông báo trong app -->
+        <Button
+            android:id="@+id/btnNotification"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="12dp"
+            android:minHeight="50dp"
+            android:text="Thông báo"
+            android:textAllCaps="false" />
+
+        <!-- Người 2 thêm: nút mở danh sách bạn bè và lời mời -->
+        <Button
+            android:id="@+id/btnFriendList"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="12dp"
+            android:minHeight="50dp"
+            android:text="Danh sách bạn bè"
+            android:textAllCaps="false" />
+
+        <Button
+            android:id="@+id/btnFriendRequests"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="12dp"
+            android:minHeight="50dp"
+            android:text="Lời mời kết bạn"
+            android:textAllCaps="false" />
+
+        <!-- Người 5 thêm: chỉ hiển thị bằng code nếu tài khoản có role ADMIN -->
+        <Button
+            android:id="@+id/btnAdminDashboard"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="12dp"
+            android:minHeight="50dp"
+            android:text="Admin Dashboard"
+            android:textAllCaps="false"
+            android:visibility="gone" />
+
+        <!-- Nút đăng xuất tài khoản -->
+        <Button
+            android:id="@+id/btnLogout"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="12dp"
+            android:minHeight="50dp"
+            android:text="Đăng xuất"
+            android:textAllCaps="false" />
+
+    </LinearLayout>
+
+</ScrollView>

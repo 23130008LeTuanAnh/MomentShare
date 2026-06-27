@@ -1,0 +1,68 @@
+<?xml version="1.0" encoding="utf-8"?>
+
+<!--
+    Người 5 thêm: layout danh sách thông báo trong app.
+    Hiển thị thông báo mới và nút đánh dấu tất cả đã đọc.
+-->
+<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    android:layout_width="match_parent"
+    android:layout_height="match_parent"
+    android:background="#F5F7FB"
+    android:orientation="vertical"
+    android:padding="20dp">
+
+    <TextView
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:layout_marginTop="24dp"
+        android:text="Thông báo"
+        android:textColor="#111827"
+        android:textSize="26sp"
+        android:textStyle="bold" />
+
+    <TextView
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:layout_marginTop="6dp"
+        android:text="Các sự kiện mới như ảnh được gửi, lời mời kết bạn, reaction và báo cáo."
+        android:textColor="#6B7280"
+        android:textSize="14sp" />
+
+    <ProgressBar
+        android:id="@+id/progressBar"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:layout_gravity="center_horizontal"
+        android:layout_marginTop="14dp"
+        android:visibility="gone" />
+
+    <Button
+        android:id="@+id/btnMarkAllRead"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:layout_marginTop="14dp"
+        android:minHeight="48dp"
+        android:text="Đánh dấu tất cả đã đọc"
+        android:textAllCaps="false" />
+
+    <TextView
+        android:id="@+id/txtEmptyNotifications"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:layout_marginTop="24dp"
+        android:gravity="center"
+        android:text="Chưa có thông báo"
+        android:textColor="#6B7280"
+        android:textSize="15sp"
+        android:visibility="gone" />
+
+    <ListView
+        android:id="@+id/listNotifications"
+        android:layout_width="match_parent"
+        android:layout_height="0dp"
+        android:layout_marginTop="16dp"
+        android:layout_weight="1"
+        android:background="#FFFFFF"
+        android:divider="#E5E7EB"
+        android:dividerHeight="1dp" />
+</LinearLayout>

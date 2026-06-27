@@ -1,0 +1,9 @@
+com.example.momentshare.app-pngs-0 C:\Users\khanh\StudioProjects\MomentShare\app\build\generated\res\pngs\debug
+com.example.momentshare.app-res-1 C:\Users\khanh\StudioProjects\MomentShare\app\build\generated\res\processDebugGoogleServices
+com.example.momentshare.app-updated_navigation_xml-2 C:\Users\khanh\StudioProjects\MomentShare\app\build\generated\updated_navigation_xml\debug
+com.example.momentshare.app-packageDebugResources-3 C:\Users\khanh\StudioProjects\MomentShare\app\build\intermediates\incremental\debug\packageDebugResources\merged.dir
+com.example.momentshare.app-packageDebugResources-4 C:\Users\khanh\StudioProjects\MomentShare\app\build\intermediates\incremental\debug\packageDebugResources\stripped.dir
+com.example.momentshare.app-debug-5 C:\Users\khanh\StudioProjects\MomentShare\app\build\intermediates\merged_res\debug\mergeDebugResources
+com.example.momentshare.app-debug-6 C:\Users\khanh\StudioProjects\MomentShare\app\src\debug\res
+com.example.momentshare.app-main-7 C:\Users\khanh\StudioProjects\MomentShare\app\src\main\res
+gradleHome-0 C:\Users\khanh\.gradle

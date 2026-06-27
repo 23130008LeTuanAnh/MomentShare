@@ -107,6 +107,8 @@ public class EditProfileActivity extends AppCompatActivity {
      * Khai báo sự kiện lưu, hủy và chọn avatar.
      */
     private void setupEvents() {
+        findViewById(R.id.btnBackEditProfile).setOnClickListener(v -> finish());
+
         imgAvatar.setOnClickListener(v -> pickAvatarLauncher.launch("image/*"));
 
         btnSaveProfile.setOnClickListener(v -> handleSaveProfile());
