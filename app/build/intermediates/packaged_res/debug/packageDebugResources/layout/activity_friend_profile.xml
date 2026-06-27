@@ -1,0 +1,72 @@
+<?xml version="1.0" encoding="utf-8"?>
+<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    android:layout_width="match_parent"
+    android:layout_height="match_parent"
+    android:orientation="vertical"
+    android:padding="24dp"
+    android:gravity="center_horizontal"
+    android:background="#FFFFFF">
+
+    <ImageButton
+        android:id="@+id/btnBackFriendProfile"
+        android:layout_width="48dp"
+        android:layout_height="48dp"
+        android:layout_gravity="start"
+        android:background="?attr/selectableItemBackgroundBorderless"
+        android:src="@android:drawable/ic_media_previous"
+        android:contentDescription="Quay lại" />
+
+    <ImageView
+        android:id="@+id/imgFriendProfileAvatar"
+        android:layout_width="120dp"
+        android:layout_height="120dp"
+        android:layout_marginTop="24dp"
+        android:src="@mipmap/ic_launcher" />
+
+    <TextView
+        android:id="@+id/txtFriendProfileName"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:layout_marginTop="16dp"
+        android:text="Full Name"
+        android:textSize="24sp"
+        android:textStyle="bold"
+        android:textColor="#000000" />
+
+    <TextView
+        android:id="@+id/txtFriendProfileUsername"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:layout_marginTop="4dp"
+        android:text="username"
+        android:textSize="16sp"
+        android:textColor="#777777" />
+
+    <TextView
+        android:id="@+id/txtFriendProfileBio"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:layout_marginTop="24dp"
+        android:text="Bio information goes here"
+        android:gravity="center"
+        android:textSize="16sp"
+        android:textColor="#444444" />
+
+    <Button
+        android:id="@+id/btnFriendProfileChat"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:layout_marginTop="32dp"
+        android:text="Nhắn tin"
+        android:textAllCaps="false" />
+
+    <Button
+        android:id="@+id/btnFriendProfileUnfriend"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:layout_marginTop="12dp"
+        android:text="Hủy kết bạn"
+        android:textAllCaps="false"
+        android:textColor="#FF0000" />
+
+</LinearLayout>

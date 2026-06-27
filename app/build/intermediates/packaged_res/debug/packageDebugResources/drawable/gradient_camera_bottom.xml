@@ -1,0 +1,11 @@
+<?xml version="1.0" encoding="utf-8"?>
+
+<!--
+    Người 5 thêm: drawable bổ sung để sửa resource còn thiếu ở màn hình camera hiện có.
+-->
+<shape xmlns:android="http://schemas.android.com/apk/res/android">
+    <gradient
+        android:angle="90"
+        android:endColor="#99000000"
+        android:startColor="#00000000" />
+</shape>

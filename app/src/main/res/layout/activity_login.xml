@@ -25,6 +25,15 @@
         android:orientation="vertical"
         android:padding="24dp">
 
+        <ImageButton
+            android:id="@+id/btnBackLogin"
+            android:layout_width="48dp"
+            android:layout_height="48dp"
+            android:layout_gravity="start"
+            android:background="?attr/selectableItemBackgroundBorderless"
+            android:src="@android:drawable/ic_media_previous"
+            android:contentDescription="Quay lại" />
+
         <!-- Tiêu đề màn hình đăng nhập -->
         <TextView
             android:id="@+id/txtLoginTitle"

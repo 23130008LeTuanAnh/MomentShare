@@ -14,6 +14,15 @@
         android:paddingHorizontal="20dp"
         android:paddingVertical="24dp">
 
+        <ImageButton
+            android:id="@+id/btnBackPreview"
+            android:layout_width="48dp"
+            android:layout_height="48dp"
+            android:layout_gravity="start"
+            android:background="?attr/selectableItemBackgroundBorderless"
+            android:src="@android:drawable/ic_media_previous"
+            android:contentDescription="Quay lại" />
+
         <TextView
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"

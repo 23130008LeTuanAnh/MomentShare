@@ -1,0 +1,194 @@
+[
+    {
+        "merged": "C:\\Users\\khanh\\.gradle\\daemon\\9.4.1\\com.example.momentshare.app-debug-53:\\layout_activity_camera.xml.flat",
+        "source": "C:\\Users\\khanh\\.gradle\\daemon\\9.4.1\\com.example.momentshare.app-main-55:\\layout\\activity_camera.xml"
+    },
+    {
+        "merged": "C:\\Users\\khanh\\.gradle\\daemon\\9.4.1\\com.example.momentshare.app-debug-53:\\layout_activity_notification.xml.flat",
+        "source": "C:\\Users\\khanh\\.gradle\\daemon\\9.4.1\\com.example.momentshare.app-main-55:\\layout\\activity_notification.xml"
+    },
+    {
+        "merged": "C:\\Users\\khanh\\.gradle\\daemon\\9.4.1\\com.example.momentshare.app-debug-53:\\mipmap-xxhdpi_ic_launcher.webp.flat",
+        "source": "C:\\Users\\khanh\\.gradle\\daemon\\9.4.1\\com.example.momentshare.app-main-55:\\mipmap-xxhdpi\\ic_launcher.webp"
+    },
+    {
+        "merged": "C:\\Users\\khanh\\.gradle\\daemon\\9.4.1\\com.example.momentshare.app-debug-53:\\layout_activity_history.xml.flat",
+        "source": "C:\\Users\\khanh\\.gradle\\daemon\\9.4.1\\com.example.momentshare.app-main-55:\\layout\\activity_history.xml"
+    },
+    {
+        "merged": "C:\\Users\\khanh\\.gradle\\daemon\\9.4.1\\com.example.momentshare.app-debug-53:\\layout_activity_select_friend_send.xml.flat",
+        "source": "C:\\Users\\khanh\\.gradle\\daemon\\9.4.1\\com.example.momentshare.app-main-55:\\layout\\activity_select_friend_send.xml"
+    },
+    {
+        "merged": "C:\\Users\\khanh\\.gradle\\daemon\\9.4.1\\com.example.momentshare.app-debug-53:\\drawable_ic_reaction_wow.xml.flat",
+        "source": "C:\\Users\\khanh\\.gradle\\daemon\\9.4.1\\com.example.momentshare.app-main-55:\\drawable\\ic_reaction_wow.xml"
+    },
+    {
+        "merged": "C:\\Users\\khanh\\.gradle\\daemon\\9.4.1\\com.example.momentshare.app-debug-53:\\layout_activity_moment_detail.xml.flat",
+        "source": "C:\\Users\\khanh\\.gradle\\daemon\\9.4.1\\com.example.momentshare.app-main-55:\\layout\\activity_moment_detail.xml"
+    },
+    {
+        "merged": "C:\\Users\\khanh\\.gradle\\daemon\\9.4.1\\com.example.momentshare.app-debug-53:\\layout_item_history_moment.xml.flat",
+        "source": "C:\\Users\\khanh\\.gradle\\daemon\\9.4.1\\com.example.momentshare.app-main-55:\\layout\\item_history_moment.xml"
+    },
+    {
+        "merged": "com.example.momentshare.app-debug-53:/layout_activity_friend_profile.xml.flat",
+        "source": "com.example.momentshare.app-main-55:/layout/activity_friend_profile.xml"
+    },
+    {
+        "merged": "C:\\Users\\khanh\\.gradle\\daemon\\9.4.1\\com.example.momentshare.app-debug-53:\\mipmap-xhdpi_ic_launcher.webp.flat",
+        "source": "C:\\Users\\khanh\\.gradle\\daemon\\9.4.1\\com.example.momentshare.app-main-55:\\mipmap-xhdpi\\ic_launcher.webp"
+    },
+    {
+        "merged": "C:\\Users\\khanh\\.gradle\\daemon\\9.4.1\\com.example.momentshare.app-debug-53:\\mipmap-mdpi_ic_launcher.webp.flat",
+        "source": "C:\\Users\\khanh\\.gradle\\daemon\\9.4.1\\com.example.momentshare.app-main-55:\\mipmap-mdpi\\ic_launcher.webp"
+    },
+    {
+        "merged": "C:\\Users\\khanh\\.gradle\\daemon\\9.4.1\\com.example.momentshare.app-debug-53:\\layout_activity_profile.xml.flat",
+        "source": "C:\\Users\\khanh\\.gradle\\daemon\\9.4.1\\com.example.momentshare.app-main-55:\\layout\\activity_profile.xml"
+    },
+    {
+        "merged": "C:\\Users\\khanh\\.gradle\\daemon\\9.4.1\\com.example.momentshare.app-debug-53:\\mipmap-xhdpi_ic_launcher_round.webp.flat",
+        "source": "C:\\Users\\khanh\\.gradle\\daemon\\9.4.1\\com.example.momentshare.app-main-55:\\mipmap-xhdpi\\ic_launcher_round.webp"
+    },
+    {
+        "merged": "com.example.momentshare.app-debug-53:/layout_activity_friend_list.xml.flat",
+        "source": "com.example.momentshare.app-main-55:/layout/activity_friend_list.xml"
+    },
+    {
+        "merged": "C:\\Users\\khanh\\.gradle\\daemon\\9.4.1\\com.example.momentshare.app-debug-53:\\drawable_gradient_camera_bottom.xml.flat",
+        "source": "C:\\Users\\khanh\\.gradle\\daemon\\9.4.1\\com.example.momentshare.app-main-55:\\drawable\\gradient_camera_bottom.xml"
+    },
+    {
+        "merged": "C:\\Users\\khanh\\.gradle\\daemon\\9.4.1\\com.example.momentshare.app-debug-53:\\xml_backup_rules.xml.flat",
+        "source": "C:\\Users\\khanh\\.gradle\\daemon\\9.4.1\\com.example.momentshare.app-main-55:\\xml\\backup_rules.xml"
+    },
+    {
+        "merged": "C:\\Users\\khanh\\.gradle\\daemon\\9.4.1\\com.example.momentshare.app-debug-53:\\drawable-anydpi-v24_ic_launcher_foreground.xml.flat",
+        "source": "C:\\Users\\khanh\\.gradle\\daemon\\9.4.1\\com.example.momentshare.app-pngs-49:\\drawable-anydpi-v24\\ic_launcher_foreground.xml"
+    },
+    {
+        "merged": "com.example.momentshare.app-debug-53:/layout_activity_friend_request.xml.flat",
+        "source": "com.example.momentshare.app-main-55:/layout/activity_friend_request.xml"
+    },
+    {
+        "merged": "C:\\Users\\khanh\\.gradle\\daemon\\9.4.1\\com.example.momentshare.app-debug-53:\\mipmap-hdpi_ic_launcher_round.webp.flat",
+        "source": "C:\\Users\\khanh\\.gradle\\daemon\\9.4.1\\com.example.momentshare.app-main-55:\\mipmap-hdpi\\ic_launcher_round.webp"
+    },
+    {
+        "merged": "C:\\Users\\khanh\\.gradle\\daemon\\9.4.1\\com.example.momentshare.app-debug-53:\\layout_activity_login.xml.flat",
+        "source": "C:\\Users\\khanh\\.gradle\\daemon\\9.4.1\\com.example.momentshare.app-main-55:\\layout\\activity_login.xml"
+    },
+    {
+        "merged": "C:\\Users\\khanh\\.gradle\\daemon\\9.4.1\\com.example.momentshare.app-debug-53:\\mipmap-anydpi-v26_ic_launcher.xml.flat",
+        "source": "C:\\Users\\khanh\\.gradle\\daemon\\9.4.1\\com.example.momentshare.app-main-55:\\mipmap-anydpi-v26\\ic_launcher.xml"
+    },
+    {
+        "merged": "C:\\Users\\khanh\\.gradle\\daemon\\9.4.1\\com.example.momentshare.app-debug-53:\\mipmap-xxxhdpi_ic_launcher.webp.flat",
+        "source": "C:\\Users\\khanh\\.gradle\\daemon\\9.4.1\\com.example.momentshare.app-main-55:\\mipmap-xxxhdpi\\ic_launcher.webp"
+    },
+    {
+        "merged": "C:\\Users\\khanh\\.gradle\\daemon\\9.4.1\\com.example.momentshare.app-debug-53:\\layout_activity_report_management.xml.flat",
+        "source": "C:\\Users\\khanh\\.gradle\\daemon\\9.4.1\\com.example.momentshare.app-main-55:\\layout\\activity_report_management.xml"
+    },
+    {
+        "merged": "C:\\Users\\khanh\\.gradle\\daemon\\9.4.1\\com.example.momentshare.app-debug-53:\\drawable_ic_reaction_haha.xml.flat",
+        "source": "C:\\Users\\khanh\\.gradle\\daemon\\9.4.1\\com.example.momentshare.app-main-55:\\drawable\\ic_reaction_haha.xml"
+    },
+    {
+        "merged": "C:\\Users\\khanh\\.gradle\\daemon\\9.4.1\\com.example.momentshare.app-debug-53:\\layout_item_moment_feed.xml.flat",
+        "source": "C:\\Users\\khanh\\.gradle\\daemon\\9.4.1\\com.example.momentshare.app-main-55:\\layout\\item_moment_feed.xml"
+    },
+    {
+        "merged": "C:\\Users\\khanh\\.gradle\\daemon\\9.4.1\\com.example.momentshare.app-debug-53:\\layout_activity_splash.xml.flat",
+        "source": "C:\\Users\\khanh\\.gradle\\daemon\\9.4.1\\com.example.momentshare.app-main-55:\\layout\\activity_splash.xml"
+    },
+    {
+        "merged": "C:\\Users\\khanh\\.gradle\\daemon\\9.4.1\\com.example.momentshare.app-debug-53:\\mipmap-hdpi_ic_launcher.webp.flat",
+        "source": "C:\\Users\\khanh\\.gradle\\daemon\\9.4.1\\com.example.momentshare.app-main-55:\\mipmap-hdpi\\ic_launcher.webp"
+    },
+    {
+        "merged": "C:\\Users\\khanh\\.gradle\\daemon\\9.4.1\\com.example.momentshare.app-debug-53:\\layout_activity_statistics.xml.flat",
+        "source": "C:\\Users\\khanh\\.gradle\\daemon\\9.4.1\\com.example.momentshare.app-main-55:\\layout\\activity_statistics.xml"
+    },
+    {
+        "merged": "C:\\Users\\khanh\\.gradle\\daemon\\9.4.1\\com.example.momentshare.app-debug-53:\\mipmap-xxxhdpi_ic_launcher_round.webp.flat",
+        "source": "C:\\Users\\khanh\\.gradle\\daemon\\9.4.1\\com.example.momentshare.app-main-55:\\mipmap-xxxhdpi\\ic_launcher_round.webp"
+    },
+    {
+        "merged": "C:\\Users\\khanh\\.gradle\\daemon\\9.4.1\\com.example.momentshare.app-debug-53:\\layout_activity_edit_profile.xml.flat",
+        "source": "C:\\Users\\khanh\\.gradle\\daemon\\9.4.1\\com.example.momentshare.app-main-55:\\layout\\activity_edit_profile.xml"
+    },
+    {
+        "merged": "com.example.momentshare.app-debug-53:/layout_activity_profile.xml.flat",
+        "source": "com.example.momentshare.app-main-55:/layout/activity_profile.xml"
+    },
+    {
+        "merged": "C:\\Users\\khanh\\.gradle\\daemon\\9.4.1\\com.example.momentshare.app-debug-53:\\layout_activity_main.xml.flat",
+        "source": "C:\\Users\\khanh\\.gradle\\daemon\\9.4.1\\com.example.momentshare.app-main-55:\\layout\\activity_main.xml"
+    },
+    {
+        "merged": "C:\\Users\\khanh\\.gradle\\daemon\\9.4.1\\com.example.momentshare.app-debug-53:\\layout_activity_admin_dashboard.xml.flat",
+        "source": "C:\\Users\\khanh\\.gradle\\daemon\\9.4.1\\com.example.momentshare.app-main-55:\\layout\\activity_admin_dashboard.xml"
+    },
+    {
+        "merged": "C:\\Users\\khanh\\.gradle\\daemon\\9.4.1\\com.example.momentshare.app-debug-53:\\mipmap-anydpi-v26_ic_launcher_round.xml.flat",
+        "source": "C:\\Users\\khanh\\.gradle\\daemon\\9.4.1\\com.example.momentshare.app-main-55:\\mipmap-anydpi-v26\\ic_launcher_round.xml"
+    },
+    {
+        "merged": "C:\\Users\\khanh\\.gradle\\daemon\\9.4.1\\com.example.momentshare.app-debug-53:\\drawable_ic_reaction_sad.xml.flat",
+        "source": "C:\\Users\\khanh\\.gradle\\daemon\\9.4.1\\com.example.momentshare.app-main-55:\\drawable\\ic_reaction_sad.xml"
+    },
+    {
+        "merged": "C:\\Users\\khanh\\.gradle\\daemon\\9.4.1\\com.example.momentshare.app-debug-53:\\drawable_ic_reaction_love.xml.flat",
+        "source": "C:\\Users\\khanh\\.gradle\\daemon\\9.4.1\\com.example.momentshare.app-main-55:\\drawable\\ic_reaction_love.xml"
+    },
+    {
+        "merged": "C:\\Users\\khanh\\.gradle\\daemon\\9.4.1\\com.example.momentshare.app-debug-53:\\drawable_ic_reaction_like.xml.flat",
+        "source": "C:\\Users\\khanh\\.gradle\\daemon\\9.4.1\\com.example.momentshare.app-main-55:\\drawable\\ic_reaction_like.xml"
+    },
+    {
+        "merged": "com.example.momentshare.app-debug-53:/layout_activity_search_friend.xml.flat",
+        "source": "com.example.momentshare.app-main-55:/layout/activity_search_friend.xml"
+    },
+    {
+        "merged": "C:\\Users\\khanh\\.gradle\\daemon\\9.4.1\\com.example.momentshare.app-debug-53:\\drawable_ic_launcher_background.xml.flat",
+        "source": "C:\\Users\\khanh\\.gradle\\daemon\\9.4.1\\com.example.momentshare.app-main-55:\\drawable\\ic_launcher_background.xml"
+    },
+    {
+        "merged": "com.example.momentshare.app-debug-53:/layout_item_friend.xml.flat",
+        "source": "com.example.momentshare.app-main-55:/layout/item_friend.xml"
+    },
+    {
+        "merged": "C:\\Users\\khanh\\.gradle\\daemon\\9.4.1\\com.example.momentshare.app-debug-53:\\layout_activity_user_management.xml.flat",
+        "source": "C:\\Users\\khanh\\.gradle\\daemon\\9.4.1\\com.example.momentshare.app-main-55:\\layout\\activity_user_management.xml"
+    },
+    {
+        "merged": "C:\\Users\\khanh\\.gradle\\daemon\\9.4.1\\com.example.momentshare.app-debug-53:\\layout_activity_home_feed.xml.flat",
+        "source": "C:\\Users\\khanh\\.gradle\\daemon\\9.4.1\\com.example.momentshare.app-main-55:\\layout\\activity_home_feed.xml"
+    },
+    {
+        "merged": "C:\\Users\\khanh\\.gradle\\daemon\\9.4.1\\com.example.momentshare.app-debug-53:\\xml_data_extraction_rules.xml.flat",
+        "source": "C:\\Users\\khanh\\.gradle\\daemon\\9.4.1\\com.example.momentshare.app-main-55:\\xml\\data_extraction_rules.xml"
+    },
+    {
+        "merged": "com.example.momentshare.app-debug-53:/layout_item_friend_request.xml.flat",
+        "source": "com.example.momentshare.app-main-55:/layout/item_friend_request.xml"
+    },
+    {
+        "merged": "C:\\Users\\khanh\\.gradle\\daemon\\9.4.1\\com.example.momentshare.app-debug-53:\\mipmap-mdpi_ic_launcher_round.webp.flat",
+        "source": "C:\\Users\\khanh\\.gradle\\daemon\\9.4.1\\com.example.momentshare.app-main-55:\\mipmap-mdpi\\ic_launcher_round.webp"
+    },
+    {
+        "merged": "C:\\Users\\khanh\\.gradle\\daemon\\9.4.1\\com.example.momentshare.app-debug-53:\\layout_activity_register.xml.flat",
+        "source": "C:\\Users\\khanh\\.gradle\\daemon\\9.4.1\\com.example.momentshare.app-main-55:\\layout\\activity_register.xml"
+    },
+    {
+        "merged": "C:\\Users\\khanh\\.gradle\\daemon\\9.4.1\\com.example.momentshare.app-debug-53:\\mipmap-xxhdpi_ic_launcher_round.webp.flat",
+        "source": "C:\\Users\\khanh\\.gradle\\daemon\\9.4.1\\com.example.momentshare.app-main-55:\\mipmap-xxhdpi\\ic_launcher_round.webp"
+    },
+    {
+        "merged": "C:\\Users\\khanh\\.gradle\\daemon\\9.4.1\\com.example.momentshare.app-debug-53:\\layout_activity_preview_moment.xml.flat",
+        "source": "C:\\Users\\khanh\\.gradle\\daemon\\9.4.1\\com.example.momentshare.app-main-55:\\layout\\activity_preview_moment.xml"
+    }
+]

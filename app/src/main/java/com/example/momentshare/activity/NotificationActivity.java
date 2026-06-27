@@ -54,6 +54,8 @@ public class NotificationActivity extends AppCompatActivity {
         progressBar = findViewById(R.id.progressBar);
         btnMarkAllRead = findViewById(R.id.btnMarkAllRead);
 
+        findViewById(R.id.btnBackNotification).setOnClickListener(v -> finish());
+
         adapter = new ArrayAdapter<>(this, android.R.layout.simple_list_item_1, new ArrayList<>());
         listNotifications.setAdapter(adapter);
         listNotifications.setOnItemClickListener((parent, view, position, id) -> markOneAsRead(notifications.get(position)));

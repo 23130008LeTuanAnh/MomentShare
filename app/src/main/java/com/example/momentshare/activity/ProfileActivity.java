@@ -14,9 +14,12 @@ import com.bumptech.glide.Glide;
 import com.example.momentshare.R;
 import com.example.momentshare.model.User;
 import com.example.momentshare.repository.AuthManager;
+import com.example.momentshare.repository.FriendRepository;
 import com.example.momentshare.repository.UserRepository;
 import com.example.momentshare.util.Constants;
 import com.example.momentshare.util.ValidationUtils;
+
+import java.util.List;
 
 /**
  * ProfileActivity hiển thị hồ sơ cá nhân của người dùng.
@@ -48,7 +51,10 @@ public class ProfileActivity extends AppCompatActivity {
     private TextView txtReceivedCount;
 
     private Button btnEditProfile;
+    private Button btnHomeFeed;
     private Button btnNotification; // Người 5 thêm: nút mở danh sách thông báo.
+    private Button btnFriendList; // Người 2 thêm
+    private Button btnFriendRequests; // Người 2 thêm
     private Button btnAdminDashboard; // Người 5 thêm: nút vào khu vực quản trị cho tài khoản ADMIN.
     private Button btnLogout;
 
@@ -93,7 +99,10 @@ public class ProfileActivity extends AppCompatActivity {
         txtReceivedCount = findViewById(R.id.txtReceivedCount);
 
         btnEditProfile = findViewById(R.id.btnEditProfile);
+        btnHomeFeed = findViewById(R.id.btnHomeFeed);
         btnNotification = findViewById(R.id.btnNotification); // Người 5 thêm
+        btnFriendList = findViewById(R.id.btnFriendList); // Người 2 thêm
+        btnFriendRequests = findViewById(R.id.btnFriendRequests); // Người 2 thêm
         btnAdminDashboard = findViewById(R.id.btnAdminDashboard); // Người 5 thêm
         btnLogout = findViewById(R.id.btnLogout);
     }
@@ -107,6 +116,11 @@ public class ProfileActivity extends AppCompatActivity {
             startActivity(intent);
         });
 
+        btnHomeFeed.setOnClickListener(v -> {
+            Intent intent = new Intent(ProfileActivity.this, HomeFeedActivity.class);
+            startActivity(intent);
+        });
+
         // Người 5 thêm: mở màn hình thông báo cá nhân.
         btnNotification.setOnClickListener(v -> {
             Intent intent = new Intent(ProfileActivity.this, NotificationActivity.class);
@@ -116,6 +130,17 @@ public class ProfileActivity extends AppCompatActivity {
         // Người 5 thêm: mở trang quản trị, Activity bên trong sẽ kiểm tra lại quyền ADMIN.
         btnAdminDashboard.setOnClickListener(v -> {
             Intent intent = new Intent(ProfileActivity.this, AdminDashboardActivity.class);
+            startActivity(intent);
+        });
+
+        // Người 2 thêm
+        btnFriendList.setOnClickListener(v -> {
+            Intent intent = new Intent(ProfileActivity.this, FriendListActivity.class);
+            startActivity(intent);
+        });
+
+        btnFriendRequests.setOnClickListener(v -> {
+            Intent intent = new Intent(ProfileActivity.this, FriendRequestActivity.class);
             startActivity(intent);
         });
 
@@ -198,8 +223,20 @@ public class ProfileActivity extends AppCompatActivity {
         // Người 5 thêm: chỉ hiện nút Admin Dashboard cho tài khoản có role ADMIN.
         btnAdminDashboard.setVisibility(Constants.ROLE_ADMIN.equals(user.getRole()) ? View.VISIBLE : View.GONE);
 
+        // Cập nhật số lượng bạn bè thật (Người 2 thêm)
+        new FriendRepository().getFriendList(user.getUserId(), new FriendRepository.UserListCallback() {
+            @Override
+            public void onSuccess(List<User> users) {
+                txtFriendCount.setText(users.size() + " bạn bè");
+            }
+
+            @Override
+            public void onFailure(String errorMessage) {
+                txtFriendCount.setText("0 bạn bè");
+            }
+        });
+
         // Các chỉ số này sẽ được cập nhật thật khi nhóm hoàn thiện module Friends và Moments.
-        txtFriendCount.setText("0 bạn bè");
         txtSentCount.setText("0 ảnh đã gửi");
         txtReceivedCount.setText("0 ảnh đã nhận");
     }

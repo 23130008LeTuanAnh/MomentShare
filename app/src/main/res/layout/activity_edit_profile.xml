@@ -25,6 +25,15 @@
         android:orientation="vertical"
         android:padding="24dp">
 
+        <ImageButton
+            android:id="@+id/btnBackEditProfile"
+            android:layout_width="48dp"
+            android:layout_height="48dp"
+            android:layout_gravity="start"
+            android:background="?attr/selectableItemBackgroundBorderless"
+            android:src="@android:drawable/ic_media_previous"
+            android:contentDescription="Quay lại" />
+
         <!-- Tiêu đề màn hình chỉnh sửa hồ sơ -->
         <TextView
             android:id="@+id/txtEditProfileTitle"

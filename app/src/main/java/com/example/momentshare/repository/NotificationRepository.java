@@ -9,6 +9,7 @@ import com.google.firebase.Timestamp;
 import com.google.firebase.firestore.DocumentReference;
 import com.google.firebase.firestore.FirebaseFirestore;
 import com.google.firebase.firestore.QueryDocumentSnapshot;
+import com.google.firebase.firestore.WriteBatch;
 
 import java.util.ArrayList;
 import java.util.Collections;
@@ -92,7 +93,7 @@ public class NotificationRepository {
                 .whereEqualTo("userId", userId)
                 .get()
                 .addOnSuccessListener(querySnapshot -> {
-                    var batch = db.batch();
+                    WriteBatch batch = db.batch();
                     java.util.Map<String, Object> updates = new java.util.HashMap<>();
                     updates.put("read", true);
                     updates.put("isRead", true);

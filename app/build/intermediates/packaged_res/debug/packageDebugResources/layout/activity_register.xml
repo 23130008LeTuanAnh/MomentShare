@@ -1,0 +1,157 @@
+<?xml version="1.0" encoding="utf-8"?>
+
+<!--
+    Màn hình đăng ký tài khoản của ứng dụng MomentShare.
+    File này thuộc phần Người 1 - Tài khoản, hồ sơ cá nhân.
+
+    Chức năng:
+    - Nhập họ tên.
+    - Nhập username.
+    - Nhập email.
+    - Nhập mật khẩu.
+    - Nhập xác nhận mật khẩu.
+    - Bấm nút đăng ký.
+    - Chuyển về màn hình đăng nhập nếu đã có tài khoản.
+-->
+<ScrollView xmlns:android="http://schemas.android.com/apk/res/android"
+    android:layout_width="match_parent"
+    android:layout_height="match_parent"
+    android:background="#FFFFFF"
+    android:fillViewport="true">
+
+    <LinearLayout
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:gravity="center_horizontal"
+        android:orientation="vertical"
+        android:padding="24dp">
+
+        <!-- Tiêu đề màn hình đăng ký -->
+        <TextView
+            android:id="@+id/txtRegisterTitle"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="36dp"
+            android:text="Tạo tài khoản"
+            android:textAlignment="center"
+            android:textColor="#222222"
+            android:textSize="30sp"
+            android:textStyle="bold" />
+
+        <!-- Mô tả ngắn cho màn hình đăng ký -->
+        <TextView
+            android:id="@+id/txtRegisterSubtitle"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="8dp"
+            android:text="Tham gia MomentShare để chia sẻ khoảnh khắc với bạn bè"
+            android:textAlignment="center"
+            android:textColor="#777777"
+            android:textSize="14sp" />
+
+        <!-- Ô nhập họ tên -->
+        <EditText
+            android:id="@+id/edtFullName"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="32dp"
+            android:background="@android:drawable/edit_text"
+            android:hint="Họ tên"
+            android:inputType="textPersonName"
+            android:minHeight="48dp"
+            android:padding="12dp"
+            android:textColor="#222222"
+            android:textColorHint="#999999" />
+
+        <!-- Ô nhập username dùng để tìm kiếm/kết bạn -->
+        <EditText
+            android:id="@+id/edtUsername"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="14dp"
+            android:background="@android:drawable/edit_text"
+            android:hint="Username"
+            android:inputType="text"
+            android:minHeight="48dp"
+            android:padding="12dp"
+            android:textColor="#222222"
+            android:textColorHint="#999999" />
+
+        <!-- Ô nhập email dùng để đăng nhập Firebase Authentication -->
+        <EditText
+            android:id="@+id/edtEmail"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="14dp"
+            android:background="@android:drawable/edit_text"
+            android:hint="Email"
+            android:inputType="textEmailAddress"
+            android:minHeight="48dp"
+            android:padding="12dp"
+            android:textColor="#222222"
+            android:textColorHint="#999999" />
+
+        <!-- Ô nhập mật khẩu -->
+        <EditText
+            android:id="@+id/edtPassword"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="14dp"
+            android:background="@android:drawable/edit_text"
+            android:hint="Mật khẩu"
+            android:inputType="textPassword"
+            android:minHeight="48dp"
+            android:padding="12dp"
+            android:textColor="#222222"
+            android:textColorHint="#999999" />
+
+        <!-- Ô nhập xác nhận mật khẩu -->
+        <EditText
+            android:id="@+id/edtConfirmPassword"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="14dp"
+            android:background="@android:drawable/edit_text"
+            android:hint="Xác nhận mật khẩu"
+            android:inputType="textPassword"
+            android:minHeight="48dp"
+            android:padding="12dp"
+            android:textColor="#222222"
+            android:textColorHint="#999999" />
+
+        <!-- ProgressBar hiển thị khi đang xử lý đăng ký -->
+        <ProgressBar
+            android:id="@+id/progressBar"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="20dp"
+            android:visibility="gone" />
+
+        <!--
+            Nút đăng ký.
+            ID này phải trùng với RegisterActivity.java:
+            findViewById(R.id.btnRegister)
+        -->
+        <Button
+            android:id="@+id/btnRegister"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="24dp"
+            android:minHeight="50dp"
+            android:text="Đăng ký"
+            android:textAllCaps="false" />
+
+        <!-- Text chuyển về màn hình đăng nhập -->
+        <TextView
+            android:id="@+id/txtGoToLogin"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="18dp"
+            android:text="Đã có tài khoản? Đăng nhập"
+            android:textAlignment="center"
+            android:textColor="#1976D2"
+            android:textSize="14sp" />
+
+    </LinearLayout>
+
+</ScrollView>

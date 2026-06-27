@@ -1,0 +1,121 @@
+<?xml version="1.0" encoding="utf-8"?>
+
+<!--
+    Layout màn hình chỉnh sửa hồ sơ cá nhân của ứng dụng MomentShare.
+
+    File này thuộc phần Người 1 - Tài khoản, hồ sơ cá nhân.
+
+    Chức năng:
+    - Hiển thị avatar tạm thời.
+    - Cho phép nhập họ tên mới.
+    - Cho phép nhập mô tả cá nhân mới.
+    - Hiển thị ProgressBar khi đang tải hoặc lưu dữ liệu Firestore.
+    - Cho phép lưu thay đổi hoặc hủy chỉnh sửa.
+-->
+<ScrollView xmlns:android="http://schemas.android.com/apk/res/android"
+    android:layout_width="match_parent"
+    android:layout_height="match_parent"
+    android:background="#FFFFFF"
+    android:fillViewport="true">
+
+    <LinearLayout
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:gravity="center_horizontal"
+        android:orientation="vertical"
+        android:padding="24dp">
+
+        <!-- Tiêu đề màn hình chỉnh sửa hồ sơ -->
+        <TextView
+            android:id="@+id/txtEditProfileTitle"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="32dp"
+            android:gravity="center"
+            android:text="Chỉnh sửa hồ sơ"
+            android:textColor="#222222"
+            android:textSize="28sp"
+            android:textStyle="bold" />
+
+        <!-- Mô tả ngắn -->
+        <TextView
+            android:id="@+id/txtEditProfileSubtitle"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="8dp"
+            android:gravity="center"
+            android:text="Cập nhật thông tin cá nhân của bạn"
+            android:textColor="#777777"
+            android:textSize="14sp" />
+
+        <!-- Avatar tạm thời, phần upload avatar sẽ mở rộng sau bằng Firebase Storage -->
+        <ImageView
+            android:id="@+id/imgAvatar"
+            android:layout_width="96dp"
+            android:layout_height="96dp"
+            android:layout_gravity="center"
+            android:layout_marginTop="24dp"
+            android:contentDescription="Avatar chỉnh sửa"
+            android:src="@mipmap/ic_launcher" />
+
+        <!-- Ô nhập họ tên -->
+        <EditText
+            android:id="@+id/edtFullName"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="24dp"
+            android:background="@android:drawable/edit_text"
+            android:hint="Họ tên"
+            android:inputType="textPersonName"
+            android:minHeight="48dp"
+            android:padding="12dp"
+            android:textColor="#222222"
+            android:textColorHint="#999999" />
+
+        <!-- Ô nhập bio/mô tả cá nhân -->
+        <EditText
+            android:id="@+id/edtBio"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="14dp"
+            android:background="@android:drawable/edit_text"
+            android:gravity="top"
+            android:hint="Mô tả cá nhân"
+            android:inputType="textMultiLine"
+            android:minHeight="96dp"
+            android:minLines="3"
+            android:padding="12dp"
+            android:textColor="#222222"
+            android:textColorHint="#999999" />
+
+        <!-- ProgressBar hiển thị khi đang tải hoặc lưu hồ sơ -->
+        <ProgressBar
+            android:id="@+id/progressBar"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="20dp"
+            android:visibility="gone" />
+
+        <!-- Nút lưu thay đổi -->
+        <Button
+            android:id="@+id/btnSaveProfile"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="24dp"
+            android:minHeight="50dp"
+            android:text="Lưu thay đổi"
+            android:textAllCaps="false" />
+
+        <!-- Nút hủy chỉnh sửa -->
+        <Button
+            android:id="@+id/btnCancelEdit"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="12dp"
+            android:minHeight="50dp"
+            android:text="Hủy"
+            android:textAllCaps="false" />
+
+    </LinearLayout>
+
+</ScrollView>

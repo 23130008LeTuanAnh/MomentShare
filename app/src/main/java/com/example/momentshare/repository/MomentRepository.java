@@ -18,6 +18,7 @@ import com.google.firebase.firestore.DocumentSnapshot;
 import com.google.firebase.firestore.FirebaseFirestore;
 import com.google.firebase.firestore.Query;
 import com.google.firebase.firestore.QueryDocumentSnapshot;
+import com.google.firebase.firestore.WriteBatch;
 
 import java.util.ArrayList;
 import java.util.Collections;
@@ -249,7 +250,7 @@ public class MomentRepository {
         moment.setCreatedAt(Timestamp.now());
         moment.setStatus("active");
 
-        var batch = db.batch();
+        WriteBatch batch = db.batch();
         batch.set(momentRef, moment);
 
         for (String receiverId : receiverIds) {

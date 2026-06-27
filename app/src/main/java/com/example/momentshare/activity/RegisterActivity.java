@@ -69,6 +69,8 @@ public class RegisterActivity extends AppCompatActivity {
      * Khai báo sự kiện cho nút đăng ký và text chuyển về đăng nhập.
      */
     private void setupEvents() {
+        findViewById(R.id.btnBackRegister).setOnClickListener(v -> finish());
+
         btnRegister.setOnClickListener(v -> handleRegister());
 
         txtGoToLogin.setOnClickListener(v -> {

@@ -57,6 +57,12 @@
         <activity android:name=".activity.MomentDetailActivity" />
         <activity android:name=".activity.HistoryActivity" />
 
+        <!-- Người 2 thêm: Các màn hình quản lý bạn bè -->
+        <activity android:name=".activity.FriendListActivity" />
+        <activity android:name=".activity.SearchFriendActivity" />
+        <activity android:name=".activity.FriendRequestActivity" />
+        <activity android:name=".activity.FriendProfileActivity" />
+
         <!-- Người 5 thêm: các màn hình Notification, Admin, Reports và Statistics. -->
         <activity android:name=".activity.NotificationActivity" />
         <activity android:name=".activity.AdminDashboardActivity" />
