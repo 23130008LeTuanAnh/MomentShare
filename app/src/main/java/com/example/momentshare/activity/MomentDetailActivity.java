@@ -1,7 +1,9 @@
 package com.example.momentshare.activity;
 
+import android.app.AlertDialog;
 import android.os.Bundle;
 import android.view.View;
+import android.widget.Button;
 import android.widget.ImageButton;
 import android.widget.ImageView;
 import android.widget.TextView;
@@ -13,6 +15,7 @@ import androidx.recyclerview.widget.RecyclerView;
 import com.bumptech.glide.Glide;
 import com.example.momentshare.R;
 import com.example.momentshare.model.Reaction;
+import com.example.momentshare.repository.AdminRepository;
 import com.example.momentshare.repository.ReactionRepository;
 import com.google.firebase.auth.FirebaseAuth;
 
@@ -35,13 +38,16 @@ public class MomentDetailActivity extends AppCompatActivity {
     private TextView txtDetailCaption;
     private TextView txtDetailTime;
     private TextView txtSelectedReaction;
+    private Button btnReportMoment; // Người 5 thực hiện: nút để user gửi báo cáo nội dung.
 
     // Khai báo các thành phần mới cho Reaction
     private RecyclerView rvReactions;
     private ReactionAdapter reactionAdapter;
     private ReactionRepository reactionRepository;
+    private AdminRepository adminRepository; // Người 5 thực hiện: dùng để tạo report cho Admin xử lý.
 
     private String currentMomentId = "";
+    private String currentSenderId = ""; // Người 5 thực hiện: lưu người gửi để không cho tự báo cáo ảnh của mình.
     private String currentUserId;
     private String selectedReaction = "";
 
@@ -67,6 +73,7 @@ public class MomentDetailActivity extends AppCompatActivity {
         txtDetailCaption = findViewById(R.id.txtDetailCaption);
         txtDetailTime = findViewById(R.id.txtDetailTime);
         txtSelectedReaction = findViewById(R.id.txtSelectedReaction);
+        btnReportMoment = findViewById(R.id.btnReportMoment); // Người 5 thực hiện
         rvReactions = findViewById(R.id.rvReactions);
 
         btnBack.setOnClickListener(v -> finish());
@@ -79,9 +86,14 @@ public class MomentDetailActivity extends AppCompatActivity {
 
         // Khởi tạo Repository và tải danh sách cảm xúc
         reactionRepository = new ReactionRepository();
+
+        // Người 5 thực hiện: AdminRepository tạo report khi user bấm Báo cáo ảnh.
+        adminRepository = new AdminRepository();
         if (currentMomentId != null && !currentMomentId.isEmpty()) {
             loadReactions();
         }
+
+        setupReportButton();
 
         setupReactionButton(R.id.btnLove, "\u2764");
         setupReactionButton(R.id.btnHaha, "\uD83D\uDE02");
@@ -92,6 +104,7 @@ public class MomentDetailActivity extends AppCompatActivity {
 
     private void showMomentData() {
         String senderId = getIntent().getStringExtra(EXTRA_SENDER_ID);
+        currentSenderId = senderId == null ? "" : senderId; // Người 5 thực hiện: giữ lại senderId để kiểm tra quyền báo cáo.
         String imageUrl = getIntent().getStringExtra(EXTRA_IMAGE_URL);
         String caption = getIntent().getStringExtra(EXTRA_CAPTION);
         long createdAt = getIntent().getLongExtra(EXTRA_CREATED_AT, 0L);
@@ -106,6 +119,65 @@ public class MomentDetailActivity extends AppCompatActivity {
                     .placeholder(R.drawable.ic_launcher_background)
                     .into(imgDetailMoment);
         }
+    }
+
+
+    /**
+     * Người 5 thực hiện: nối chức năng user tạo báo cáo nội dung từ màn hình chi tiết ảnh.
+     */
+    private void setupReportButton() {
+        btnReportMoment.setOnClickListener(v -> {
+            if (currentMomentId == null || currentMomentId.trim().isEmpty()) {
+                Toast.makeText(this, "Không xác định được ảnh cần báo cáo", Toast.LENGTH_SHORT).show();
+                return;
+            }
+
+            if (currentUserId != null && currentUserId.equals(currentSenderId)) {
+                Toast.makeText(this, "Bạn không thể báo cáo ảnh của chính mình", Toast.LENGTH_SHORT).show();
+                return;
+            }
+
+            showReportReasonDialog();
+        });
+    }
+
+    /**
+     * Người 5 thực hiện: cho user chọn lý do báo cáo thay vì tạo report rỗng.
+     */
+    private void showReportReasonDialog() {
+        String[] reasons = {
+                "Nội dung phản cảm",
+                "Spam hoặc quảng cáo",
+                "Quấy rối hoặc xúc phạm",
+                "Nội dung không phù hợp khác"
+        };
+
+        new AlertDialog.Builder(this)
+                .setTitle("Báo cáo ảnh")
+                .setItems(reasons, (dialog, which) -> submitReport(reasons[which]))
+                .setNegativeButton("Hủy", null)
+                .show();
+    }
+
+    /**
+     * Người 5 thực hiện: lưu report vào collection reports để Admin xử lý trong ReportManagementActivity.
+     */
+    private void submitReport(String reason) {
+        btnReportMoment.setEnabled(false);
+
+        adminRepository.createReport(currentUserId, currentMomentId, reason, new AdminRepository.ActionCallback() {
+            @Override
+            public void onSuccess() {
+                btnReportMoment.setEnabled(true);
+                Toast.makeText(MomentDetailActivity.this, "Đã gửi báo cáo cho Admin", Toast.LENGTH_SHORT).show();
+            }
+
+            @Override
+            public void onFailure(String errorMessage) {
+                btnReportMoment.setEnabled(true);
+                Toast.makeText(MomentDetailActivity.this, errorMessage, Toast.LENGTH_SHORT).show();
+            }
+        });
     }
 
     // Hàm gọi Firebase để tải danh sách những người đã thả cảm xúc
