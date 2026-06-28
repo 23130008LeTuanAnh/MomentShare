@@ -4,6 +4,7 @@ import androidx.annotation.NonNull;
 
 import com.example.momentshare.model.User;
 import com.example.momentshare.util.Constants;
+import com.example.momentshare.util.ValidationUtils;
 import com.google.firebase.firestore.DocumentSnapshot;
 import com.google.firebase.firestore.FirebaseFirestore;
 
@@ -70,8 +71,11 @@ public class UserRepository {
      * @param callback callback trả về true nếu username đã tồn tại
      */
     public void checkUsernameExists(@NonNull String username, @NonNull BooleanCallback callback) {
+        // Người 1 thực hiện: username luôn được chuẩn hóa trước khi kiểm tra trùng.
+        String normalizedUsername = ValidationUtils.normalizeUsername(username);
+
         db.collection(Constants.COLLECTION_USERS)
-                .whereEqualTo("username", username)
+                .whereEqualTo("username", normalizedUsername)
                 .limit(1)
                 .get()
                 .addOnSuccessListener(querySnapshot ->
@@ -89,6 +93,10 @@ public class UserRepository {
      * @param callback callback báo thành công/thất bại
      */
     public void createUser(@NonNull User user, @NonNull ActionCallback callback) {
+        // Người 1 thực hiện: lưu username/email theo một chuẩn để đăng nhập và tìm kiếm ổn định.
+        user.setUsername(ValidationUtils.normalizeUsername(user.getUsername()));
+        user.setEmail(ValidationUtils.normalizeEmail(user.getEmail()));
+
         db.collection(Constants.COLLECTION_USERS)
                 .document(user.getUserId())
                 .set(user)
@@ -129,8 +137,11 @@ public class UserRepository {
      * @param callback callback trả về User hoặc thông báo lỗi
      */
     public void getUserByUsername(@NonNull String username, @NonNull UserCallback callback) {
+        // Người 1 thực hiện: tìm username bằng dữ liệu đã chuẩn hóa chữ thường.
+        String normalizedUsername = ValidationUtils.normalizeUsername(username);
+
         db.collection(Constants.COLLECTION_USERS)
-                .whereEqualTo("username", username)
+                .whereEqualTo("username", normalizedUsername)
                 .limit(1)
                 .get()
                 .addOnSuccessListener(querySnapshot -> {
