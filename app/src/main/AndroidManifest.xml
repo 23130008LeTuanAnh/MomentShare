@@ -14,6 +14,9 @@
     <uses-permission android:name="android.permission.INTERNET" />
     <uses-permission android:name="android.permission.CAMERA" />
 
+    <!-- Người 5 thực hiện: quyền hiển thị push notification thật trên Android 13 trở lên. -->
+    <uses-permission android:name="android.permission.POST_NOTIFICATIONS" />
+
     <uses-feature android:name="android.hardware.camera" android:required="false" />
 
     <application
@@ -62,6 +65,16 @@
         <activity android:name=".activity.SearchFriendActivity" />
         <activity android:name=".activity.FriendRequestActivity" />
         <activity android:name=".activity.FriendProfileActivity" />
+
+
+        <!-- Người 5 thực hiện: service nhận push notification thật từ Firebase Cloud Messaging. -->
+        <service
+            android:name=".service.MyFirebaseMessagingService"
+            android:exported="false">
+            <intent-filter>
+                <action android:name="com.google.firebase.MESSAGING_EVENT" />
+            </intent-filter>
+        </service>
 
         <!-- Người 5 thêm: các màn hình Notification, Admin, Reports và Statistics. -->
         <activity android:name=".activity.NotificationActivity" />
