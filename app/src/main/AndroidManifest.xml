@@ -54,7 +54,6 @@
         <activity android:name=".activity.CameraActivity" />
         <activity android:name=".activity.PreviewMomentActivity" />
         <activity android:name=".activity.SelectFriendToSendActivity" />
-        <activity android:name=".activity.SendMomentActivity" />
 
         <activity android:name=".activity.HomeFeedActivity" />
         <activity android:name=".activity.MomentDetailActivity" />
