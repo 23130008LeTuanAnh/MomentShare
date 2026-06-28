@@ -37,6 +37,11 @@ public class Constants {
 
     public static final String DEFAULT_AVATAR_URL = "";
 
+    // Người 5 thực hiện: cấu hình kênh và topic cho Firebase Cloud Messaging push notification.
+    public static final String FCM_CHANNEL_ID = "momentshare_push_channel";
+    public static final String FCM_CHANNEL_NAME = "MomentShare Push Notifications";
+    public static final String FCM_USER_TOPIC_PREFIX = "user_";
+
     private Constants() {
     }
 }
