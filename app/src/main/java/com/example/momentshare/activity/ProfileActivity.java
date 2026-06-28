@@ -12,6 +12,7 @@ import androidx.appcompat.app.AppCompatActivity;
 
 import com.bumptech.glide.Glide;
 import com.example.momentshare.R;
+import com.example.momentshare.helper.FcmTokenManager;
 import com.example.momentshare.model.User;
 import com.example.momentshare.repository.AuthManager;
 import com.example.momentshare.repository.FriendRepository;
@@ -79,6 +80,9 @@ public class ProfileActivity extends AppCompatActivity {
 
         initViews();
         setupEvents();
+
+        // Người 5 thực hiện: đăng ký FCM token thật cho thiết bị sau khi người dùng đã đăng nhập.
+        new FcmTokenManager().registerCurrentUserDevice(this);
     }
 
     @Override
