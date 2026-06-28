@@ -97,6 +97,18 @@
                 android:textSize="16sp"
                 tools:text="Studying mobile programming with group 5!" />
 
+
+            <!-- Người 5 thực hiện: nút cho user tạo báo cáo nội dung, nối với AdminRepository.createReport(). -->
+            <Button
+                android:id="@+id/btnReportMoment"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:layout_marginTop="18dp"
+                android:backgroundTint="#D32F2F"
+                android:text="Báo cáo ảnh"
+                android:textAllCaps="false"
+                android:textColor="@android:color/white" />
+
             <TextView
                 android:id="@+id/txtSelectedReaction"
                 android:layout_width="match_parent"
