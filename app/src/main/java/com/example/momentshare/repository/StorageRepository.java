@@ -19,6 +19,20 @@ import com.google.firebase.storage.StorageReference;
  */
 public class StorageRepository {
 
+    /**
+     * Người 5 thực hiện: bật chế độ demo khi Firebase Storage chưa dùng được do yêu cầu nâng cấp billing.
+     *
+     * true  = không upload avatar lên Firebase Storage, dùng avatar mẫu URL để demo cập nhật hồ sơ.
+     * false = upload avatar thật lên Firebase Storage khi project đã bật Storage/Blaze.
+     */
+    private static final boolean USE_DEMO_IMAGE_URL = true;
+
+    /**
+     * Người 5 thực hiện: URL avatar mẫu dùng khi chưa bật Firebase Storage.
+     */
+    private static final String DEMO_AVATAR_IMAGE_URL =
+            "https://i.pravatar.cc/300?img=12";
+
     private final StorageReference storageReference;
 
     /**
@@ -56,6 +70,16 @@ public class StorageRepository {
     public void uploadAvatar(@NonNull String userId,
                              @NonNull Uri avatarUri,
                              @NonNull UploadCallback callback) {
+
+        /**
+         * Người 5 thực hiện:
+         * Nếu đang demo và chưa bật Storage/Blaze, không gọi putFile().
+         * Hệ thống trả về avatar mẫu để EditProfileActivity vẫn cập nhật được avatarUrl trong Firestore.
+         */
+        if (USE_DEMO_IMAGE_URL) {
+            callback.onSuccess(DEMO_AVATAR_IMAGE_URL);
+            return;
+        }
 
         String fileName = userId + "_" + System.currentTimeMillis() + ".jpg";
 
