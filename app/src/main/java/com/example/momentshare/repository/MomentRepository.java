@@ -58,6 +58,14 @@ public class MomentRepository {
         void onError(Exception exception);
     }
 
+    /**
+     * Người 1 thực hiện: callback dùng cho các hàm đếm số lượng khoảnh khắc thật trên Firestore.
+     */
+    public interface CountCallback {
+        void onSuccess(long count);
+        void onFailure(@NonNull String errorMessage);
+    }
+
 
     private static final String COLLECTION_FRIENDS = "friends";
     private static final String COLLECTION_MOMENTS = "moments";
@@ -317,6 +325,39 @@ public class MomentRepository {
 
     public void getReceivedHistory(@NonNull String currentUserId, @NonNull MomentListCallback callback) {
         getHomeFeed(currentUserId, callback);
+    }
+
+    /**
+     * Người 1 thực hiện: đếm số ảnh đã gửi thật của một người dùng.
+     *
+     * Hàm này dùng cho ProfileActivity, thay cho số 0 hard-code trước đây.
+     * Chỉ đếm các moment còn trạng thái active để không tính ảnh đã bị ẩn/xóa.
+     */
+    public void countSentMoments(@NonNull String currentUserId, @NonNull CountCallback callback) {
+        // Người 1 thực hiện: query các moment active do user hiện tại gửi.
+        db.collection(COLLECTION_MOMENTS)
+                .whereEqualTo(FIELD_SENDER_ID, currentUserId)
+                .whereEqualTo(FIELD_STATUS, STATUS_ACTIVE)
+                .get()
+                .addOnSuccessListener(snapshot -> callback.onSuccess(snapshot.size()))
+                .addOnFailureListener(e ->
+                        callback.onFailure("Không thể đếm ảnh đã gửi: " + e.getMessage()));
+    }
+
+    /**
+     * Người 1 thực hiện: đếm số ảnh đã nhận thật của một người dùng.
+     *
+     * Mỗi document trong moment_receivers đại diện cho một ảnh được gửi đến người dùng.
+     * Vì vậy chỉ cần đếm các bản ghi có receiverId bằng user hiện tại.
+     */
+    public void countReceivedMoments(@NonNull String currentUserId, @NonNull CountCallback callback) {
+        // Người 1 thực hiện: query các bản ghi người nhận để đếm ảnh user đã nhận.
+        db.collection(COLLECTION_MOMENT_RECEIVERS)
+                .whereEqualTo(FIELD_RECEIVER_ID, currentUserId)
+                .get()
+                .addOnSuccessListener(snapshot -> callback.onSuccess(snapshot.size()))
+                .addOnFailureListener(e ->
+                        callback.onFailure("Không thể đếm ảnh đã nhận: " + e.getMessage()));
     }
 
     public void getMomentById(@NonNull String momentId, @NonNull MomentCallback callback) {
