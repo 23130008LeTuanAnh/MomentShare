@@ -220,9 +220,6 @@ public class MomentRepository {
     public void sendMoment(@NonNull String senderId, @NonNull Uri imageUri, @NonNull String caption,
                            @Nullable List<String> receiverIds, @NonNull SendMomentCallback callback) {
 
-        // ❌ ĐÃ XÓA ĐOẠN CODE CHẶN TRỐNG receiverIds ĐỂ CHO PHÉP ĐĂNG CÔNG KHAI
-
-        // 🛠️ SỬA LỖI: Khởi tạo đối tượng helper và truyền đúng 3 tham số (senderId, imageUri, callback)
         UploadImageHelper uploadHelper = new UploadImageHelper();
         uploadHelper.uploadMomentImage(senderId, imageUri, new UploadImageHelper.UploadCallback() {
             @Override
@@ -251,7 +248,13 @@ public class MomentRepository {
                 if (!isPublic) {
                     for (String receiverId : receiverIds) {
                         DocumentReference receiverRef = db.collection(COLLECTION_MOMENT_RECEIVERS).document();
-                        MomentReceiver mr = new MomentReceiver(receiverRef.getId(), momentId, receiverId, false, Timestamp.now());
+                        MomentReceiver mr = new MomentReceiver(
+                                receiverRef.getId(),
+                                momentId,
+                                receiverId,
+                                false,
+                                null
+                        );
                         batch.set(receiverRef, mr);
                     }
                 }
@@ -452,5 +455,35 @@ public class MomentRepository {
             moment.setMomentId(document.getId());
         }
         return moment;
+    }
+    public void markMomentAsViewed(String momentId,
+                                   String receiverId,
+                                   ActionCallback callback) {
+
+        db.collection(COLLECTION_MOMENT_RECEIVERS)
+                .whereEqualTo("momentId", momentId)
+                .whereEqualTo("receiverId", receiverId)
+                .limit(1)
+                .get()
+                .addOnSuccessListener(snapshot -> {
+
+                    if (snapshot.isEmpty()) {
+                        callback.onFailure("Không tìm thấy người nhận");
+                        return;
+                    }
+
+                    snapshot.getDocuments().get(0)
+                            .getReference()
+                            .update(
+                                    "isViewed", true,
+                                    "viewedAt", Timestamp.now()
+                            )
+                            .addOnSuccessListener(unused -> callback.onSuccess())
+                            .addOnFailureListener(e ->
+                                    callback.onFailure(e.getMessage()));
+
+                })
+                .addOnFailureListener(e ->
+                        callback.onFailure(e.getMessage()));
     }
 }
