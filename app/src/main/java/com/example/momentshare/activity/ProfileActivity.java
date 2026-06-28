@@ -15,6 +15,7 @@ import com.example.momentshare.R;
 import com.example.momentshare.model.User;
 import com.example.momentshare.repository.AuthManager;
 import com.example.momentshare.repository.FriendRepository;
+import com.example.momentshare.repository.MomentRepository;
 import com.example.momentshare.repository.UserRepository;
 import com.example.momentshare.util.Constants;
 import com.example.momentshare.util.ValidationUtils;
@@ -60,6 +61,7 @@ public class ProfileActivity extends AppCompatActivity {
 
     private AuthManager authManager;
     private UserRepository userRepository;
+    private MomentRepository momentRepository; // Người 1 thực hiện: repository dùng để đếm ảnh gửi/nhận thật trên Profile.
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -71,6 +73,9 @@ public class ProfileActivity extends AppCompatActivity {
 
         // UserRepository dùng để tải dữ liệu hồ sơ từ Firestore.
         userRepository = new UserRepository();
+
+        // Người 1 thực hiện: MomentRepository dùng để đếm số ảnh đã gửi/đã nhận thật trên Firestore.
+        momentRepository = new MomentRepository();
 
         initViews();
         setupEvents();
@@ -223,8 +228,27 @@ public class ProfileActivity extends AppCompatActivity {
         // Người 5 thêm: chỉ hiện nút Admin Dashboard cho tài khoản có role ADMIN.
         btnAdminDashboard.setVisibility(Constants.ROLE_ADMIN.equals(user.getRole()) ? View.VISIBLE : View.GONE);
 
-        // Cập nhật số lượng bạn bè thật (Người 2 thêm)
-        new FriendRepository().getFriendList(user.getUserId(), new FriendRepository.UserListCallback() {
+        // Người 1 thực hiện: sau khi hiển thị hồ sơ, tải thống kê thật thay vì dùng số 0 cố định.
+        loadProfileStatistics(user.getUserId());
+    }
+
+    /**
+     * Người 1 thực hiện: tải các chỉ số thật của hồ sơ từ Firestore.
+     *
+     * Bao gồm:
+     * - Số bạn bè đã kết nối.
+     * - Số ảnh người dùng đã gửi.
+     * - Số ảnh người dùng đã nhận.
+     */
+    private void loadProfileStatistics(String userId) {
+        if (ValidationUtils.isEmpty(userId)) {
+            txtFriendCount.setText("0 bạn bè");
+            txtSentCount.setText("0 ảnh đã gửi");
+            txtReceivedCount.setText("0 ảnh đã nhận");
+            return;
+        }
+
+        new FriendRepository().getFriendList(userId, new FriendRepository.UserListCallback() {
             @Override
             public void onSuccess(List<User> users) {
                 txtFriendCount.setText(users.size() + " bạn bè");
@@ -236,9 +260,31 @@ public class ProfileActivity extends AppCompatActivity {
             }
         });
 
-        // Các chỉ số này sẽ được cập nhật thật khi nhóm hoàn thiện module Friends và Moments.
-        txtSentCount.setText("0 ảnh đã gửi");
-        txtReceivedCount.setText("0 ảnh đã nhận");
+        // Người 1 thực hiện: đếm số ảnh đã gửi thật từ collection moments.
+        momentRepository.countSentMoments(userId, new MomentRepository.CountCallback() {
+            @Override
+            public void onSuccess(long count) {
+                txtSentCount.setText(count + " ảnh đã gửi");
+            }
+
+            @Override
+            public void onFailure(String errorMessage) {
+                txtSentCount.setText("0 ảnh đã gửi");
+            }
+        });
+
+        // Người 1 thực hiện: đếm số ảnh đã nhận thật từ collection moment_receivers.
+        momentRepository.countReceivedMoments(userId, new MomentRepository.CountCallback() {
+            @Override
+            public void onSuccess(long count) {
+                txtReceivedCount.setText(count + " ảnh đã nhận");
+            }
+
+            @Override
+            public void onFailure(String errorMessage) {
+                txtReceivedCount.setText("0 ảnh đã nhận");
+            }
+        });
     }
 
     /**
