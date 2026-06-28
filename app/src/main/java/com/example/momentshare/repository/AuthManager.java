@@ -94,7 +94,19 @@ public class AuthManager {
                          @NonNull String password,
                          @NonNull AuthCallback callback) {
 
+        // Người 1 thực hiện: chuẩn hóa username/email để dữ liệu đăng ký thống nhất trong Firebase và Firestore.
         String normalizedUsername = ValidationUtils.normalizeUsername(username);
+        String normalizedEmail = ValidationUtils.normalizeEmail(email);
+
+        if (!ValidationUtils.isValidUsername(normalizedUsername)) {
+            callback.onFailure(ValidationUtils.getUsernameErrorMessage());
+            return;
+        }
+
+        if (!ValidationUtils.isValidEmail(normalizedEmail)) {
+            callback.onFailure("Email không hợp lệ");
+            return;
+        }
 
         userRepository.checkUsernameExists(normalizedUsername, new UserRepository.BooleanCallback() {
             @Override
@@ -104,7 +116,7 @@ public class AuthManager {
                     return;
                 }
 
-                createFirebaseAccount(fullName, normalizedUsername, email, password, callback);
+                createFirebaseAccount(fullName, normalizedUsername, normalizedEmail, password, callback);
             }
 
             @Override
@@ -195,7 +207,10 @@ public class AuthManager {
                       @NonNull String password,
                       @NonNull AuthCallback callback) {
 
-        firebaseAuth.signInWithEmailAndPassword(email, password)
+        // Người 1 thực hiện: email đăng nhập luôn chuyển về chữ thường để tránh lệch dữ liệu.
+        String normalizedEmail = ValidationUtils.normalizeEmail(email);
+
+        firebaseAuth.signInWithEmailAndPassword(normalizedEmail, password)
                 .addOnSuccessListener(authResult -> {
                     String userId = getCurrentUserId();
 
@@ -228,12 +243,15 @@ public class AuthManager {
                                          @NonNull AuthCallback callback) {
 
         String normalizedAccount = account.trim();
+        // Người 1 thực hiện: chuẩn hóa account để hỗ trợ đăng nhập bằng email viết hoa hoặc username.
+        String normalizedEmail = ValidationUtils.normalizeEmail(normalizedAccount);
 
-        if (ValidationUtils.isValidEmail(normalizedAccount)) {
-            login(normalizedAccount, password, callback);
+        if (ValidationUtils.isValidEmail(normalizedEmail)) {
+            login(normalizedEmail, password, callback);
             return;
         }
 
+        // Người 1 thực hiện: nếu account không phải email thì xử lý như username đã chuẩn hóa.
         String normalizedUsername = ValidationUtils.normalizeUsername(normalizedAccount);
 
         userRepository.getUserByUsername(normalizedUsername, new UserRepository.UserCallback() {
@@ -246,7 +264,8 @@ public class AuthManager {
                     return;
                 }
 
-                login(email.trim(), password, callback);
+                // Người 1 thực hiện: email lấy từ Firestore cũng được chuẩn hóa trước khi đăng nhập FirebaseAuth.
+                login(ValidationUtils.normalizeEmail(email), password, callback);
             }
 
             @Override
