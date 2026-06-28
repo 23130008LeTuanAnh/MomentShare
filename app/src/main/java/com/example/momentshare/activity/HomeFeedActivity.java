@@ -2,6 +2,7 @@ package com.example.momentshare.activity;
 
 import android.content.Intent;
 import android.os.Bundle;
+import android.view.View;
 import android.widget.ImageButton;
 import android.widget.Toast;
 import androidx.appcompat.app.AppCompatActivity;
@@ -28,6 +29,16 @@ public class HomeFeedActivity extends AppCompatActivity implements MomentAdapter
         super.onCreate(savedInstanceState);
         setContentView(R.layout.activity_home_feed);
 
+        ImageButton btnOpenCamera = findViewById(R.id.btnOpenCamera);
+        btnOpenCamera.setOnClickListener(new View.OnClickListener() {
+            @Override
+            public void onClick(View v) {
+                // Thực hiện chuyển hướng sang CameraActivity của module Người 3
+                Intent intent = new Intent(HomeFeedActivity.this, CameraActivity.class);
+                startActivity(intent);
+            }
+        });
+
         rvHomeFeed = findViewById(R.id.rvHomeFeed);
         ImageButton btnOpenHistory = findViewById(R.id.btnOpenHistory);
         findViewById(R.id.btnBackHome).setOnClickListener(v -> finish());
@@ -50,21 +61,66 @@ public class HomeFeedActivity extends AppCompatActivity implements MomentAdapter
         );
     }
 
-    private void loadRealData() {
-        if (FirebaseAuth.getInstance().getCurrentUser() == null) {
-            Toast.makeText(this, "Vui lòng đăng nhập để xem dữ liệu", Toast.LENGTH_SHORT).show();
-            return;
-        }
-        String currentUserId = FirebaseAuth.getInstance().getCurrentUser().getUid();
+    @Override
+    protected void onResume() {
+        super.onResume();
+        // Tự động tải lại dữ liệu mỗi khi quay lại màn hình Home
+        loadRealData();
+    }
 
+    private void loadRealData() {
+        String currentUserId = FirebaseAuth.getInstance().getCurrentUser() != null
+                ? FirebaseAuth.getInstance().getCurrentUser().getUid()
+                : null;
+
+        if (currentUserId == null) return;
+
+        // 1. Lấy các bài viết được gửi riêng cho bạn (Logic cũ)
         momentRepository.getHomeFeed(currentUserId, new MomentRepository.MomentListCallback() {
             @Override
-            public void onSuccess(List<Moment> moments) {
-                momentAdapter.updateData(moments);
+            public void onSuccess(List<Moment> privateMoments) {
+                final List<Moment> allMoments = new ArrayList<>(privateMoments);
 
-                if (moments.isEmpty()) {
-                    Toast.makeText(HomeFeedActivity.this, "Chưa có khoảnh khắc nào từ bạn bè!", Toast.LENGTH_SHORT).show();
-                }
+                // 2. Kéo thêm các bài viết được gắn nhãn công khai (isPublic == true) từ Firestore
+                com.google.firebase.firestore.FirebaseFirestore.getInstance()
+                        .collection("moments")
+                        .whereEqualTo("isPublic", true)
+                        .get()
+                        .addOnSuccessListener(queryDocumentSnapshots -> {
+                            for (com.google.firebase.firestore.DocumentSnapshot doc : queryDocumentSnapshots.getDocuments()) {
+                                Moment m = doc.toObject(Moment.class);
+                                if (m != null && "active".equals(m.getStatus())) {
+                                    if (m.getMomentId() == null || m.getMomentId().isEmpty()) {
+                                        m.setMomentId(doc.getId());
+                                    }
+
+                                    // Kiểm tra trùng lặp phần tử trùng ID
+                                    boolean isDuplicate = false;
+                                    for (Moment existing : allMoments) {
+                                        if (existing.getMomentId().equals(m.getMomentId())) {
+                                            isDuplicate = true;
+                                            break;
+                                        }
+                                    }
+                                    if (!isDuplicate) {
+                                        allMoments.add(m);
+                                    }
+                                }
+                            }
+
+                            // Sắp xếp lại toàn bộ danh sách gộp theo thứ tự thời gian mới nhất lên đầu
+                            java.util.Collections.sort(allMoments, (m1, m2) -> {
+                                if (m1.getCreatedAt() == null || m2.getCreatedAt() == null) return 0;
+                                return m2.getCreatedAt().compareTo(m1.getCreatedAt());
+                            });
+
+                            // Cập nhật giao diện hiển thị lên RecyclerView
+                            momentAdapter.updateData(allMoments);
+                        })
+                        .addOnFailureListener(e -> {
+                            // Nếu lỗi khi tải bài công khai, vẫn hiển thị danh sách bài riêng tư
+                            momentAdapter.updateData(allMoments);
+                        });
             }
 
             @Override
@@ -92,4 +148,5 @@ public class HomeFeedActivity extends AppCompatActivity implements MomentAdapter
             intent.putExtra(MomentDetailActivity.EXTRA_CREATED_AT, moment.getCreatedAt().toDate().getTime());
         }
     }
+
 }
