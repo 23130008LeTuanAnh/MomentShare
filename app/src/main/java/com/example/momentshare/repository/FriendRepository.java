@@ -5,6 +5,7 @@ import androidx.annotation.NonNull;
 import com.example.momentshare.model.FriendRequest;
 import com.example.momentshare.model.User;
 import com.example.momentshare.util.Constants;
+import com.example.momentshare.util.ValidationUtils;
 import com.google.firebase.Timestamp;
 import com.google.firebase.firestore.DocumentSnapshot;
 import com.google.firebase.firestore.FieldValue;
@@ -49,32 +50,51 @@ public class FriendRepository {
      * Tìm kiếm người dùng theo username hoặc email.
      */
     public void searchUsers(String query, UserListCallback callback) {
-        String searchQuery = query.trim().toLowerCase();
-        
+        String rawQuery = query == null ? "" : query.trim();
+        // Người 1 thực hiện: chuẩn hóa từ khóa tìm kiếm để email viết hoa vẫn tìm đúng user.
+        String normalizedUsername = ValidationUtils.normalizeUsername(rawQuery);
+        String normalizedEmail = ValidationUtils.normalizeEmail(rawQuery);
+
         // Firestore không hỗ trợ tìm kiếm mờ tốt, ở đây tìm chính xác username hoặc email.
+        // Người 1 thực hiện: username và email đều được chuẩn hóa chữ thường để tránh lệch khi người dùng nhập Email viết hoa.
         db.collection(Constants.COLLECTION_USERS)
-                .whereEqualTo("username", searchQuery)
+                .whereEqualTo("username", normalizedUsername)
                 .get()
                 .addOnSuccessListener(querySnapshot -> {
                     List<User> users = new ArrayList<>();
                     for (DocumentSnapshot doc : querySnapshot.getDocuments()) {
-                        users.add(doc.toObject(User.class));
+                        User user = doc.toObject(User.class);
+                        if (user != null) {
+                            users.add(user);
+                        }
                     }
-                    
-                    if (users.isEmpty()) {
-                        db.collection(Constants.COLLECTION_USERS)
-                                .whereEqualTo("email", searchQuery)
-                                .get()
-                                .addOnSuccessListener(emailSnapshot -> {
-                                    for (DocumentSnapshot doc : emailSnapshot.getDocuments()) {
-                                        users.add(doc.toObject(User.class));
-                                    }
-                                    callback.onSuccess(users);
-                                })
-                                .addOnFailureListener(e -> callback.onFailure(e.getMessage()));
-                    } else {
+
+                    if (!users.isEmpty()) {
                         callback.onSuccess(users);
+                        return;
                     }
+
+                    searchUsersByEmail(normalizedEmail, callback);
+                })
+                .addOnFailureListener(e -> callback.onFailure(e.getMessage()));
+    }
+
+    /**
+     * Người 1 thực hiện: tìm người dùng bằng email đã chuẩn hóa chữ thường.
+     */
+    private void searchUsersByEmail(String normalizedEmail, UserListCallback callback) {
+        db.collection(Constants.COLLECTION_USERS)
+                .whereEqualTo("email", normalizedEmail)
+                .get()
+                .addOnSuccessListener(emailSnapshot -> {
+                    List<User> users = new ArrayList<>();
+                    for (DocumentSnapshot doc : emailSnapshot.getDocuments()) {
+                        User user = doc.toObject(User.class);
+                        if (user != null) {
+                            users.add(user);
+                        }
+                    }
+                    callback.onSuccess(users);
                 })
                 .addOnFailureListener(e -> callback.onFailure(e.getMessage()));
     }
