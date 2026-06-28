@@ -91,8 +91,9 @@ public class RegisterActivity extends AppCompatActivity {
      */
     private void handleRegister() {
         String fullName = edtFullName.getText().toString().trim();
-        String username = edtUsername.getText().toString().trim();
-        String email = edtEmail.getText().toString().trim();
+        // Người 1 thực hiện: chuẩn hóa username/email trước khi validate và gửi lên Firebase/Firestore.
+        String username = ValidationUtils.normalizeUsername(edtUsername.getText().toString());
+        String email = ValidationUtils.normalizeEmail(edtEmail.getText().toString());
         String password = edtPassword.getText().toString();
         String confirmPassword = edtConfirmPassword.getText().toString();
 
@@ -144,6 +145,12 @@ public class RegisterActivity extends AppCompatActivity {
                 || ValidationUtils.isEmpty(confirmPassword)) {
 
             Toast.makeText(this, "Vui lòng nhập đầy đủ thông tin", Toast.LENGTH_SHORT).show();
+            return false;
+        }
+
+        // Người 1 thực hiện: kiểm tra username theo quy tắc mới trước khi tạo tài khoản.
+        if (!ValidationUtils.isValidUsername(username)) {
+            Toast.makeText(this, ValidationUtils.getUsernameErrorMessage(), Toast.LENGTH_LONG).show();
             return false;
         }
 
