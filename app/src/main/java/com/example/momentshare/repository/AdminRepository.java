@@ -111,24 +111,44 @@ public class AdminRepository {
                              @NonNull String momentId,
                              @NonNull String reason,
                              @NonNull ActionCallback callback) {
-        String reportId = db.collection(Constants.COLLECTION_REPORTS).document().getId();
+        // Người 5 thực hiện: kiểm tra dữ liệu báo cáo trước khi lưu để user không gửi báo cáo rỗng.
+        if (reporterId.trim().isEmpty() || momentId.trim().isEmpty() || reason.trim().isEmpty()) {
+            callback.onFailure("Thiếu thông tin báo cáo");
+            return;
+        }
 
-        ReportModel report = new ReportModel(
-                reportId,
-                reporterId,
-                momentId,
-                reason,
-                Constants.REPORT_STATUS_PENDING,
-                Timestamp.now(),
-                "",
-                null
-        );
-
+        // Người 5 thực hiện: chặn user báo cáo trùng cùng một khoảnh khắc nhiều lần.
         db.collection(Constants.COLLECTION_REPORTS)
-                .document(reportId)
-                .set(report)
-                .addOnSuccessListener(unused -> callback.onSuccess())
-                .addOnFailureListener(e -> callback.onFailure("Không thể tạo báo cáo: " + e.getMessage()));
+                .whereEqualTo("reporterId", reporterId)
+                .whereEqualTo("momentId", momentId)
+                .limit(1)
+                .get()
+                .addOnSuccessListener(querySnapshot -> {
+                    if (!querySnapshot.isEmpty()) {
+                        callback.onFailure("Bạn đã báo cáo khoảnh khắc này rồi");
+                        return;
+                    }
+
+                    String reportId = db.collection(Constants.COLLECTION_REPORTS).document().getId();
+
+                    ReportModel report = new ReportModel(
+                            reportId,
+                            reporterId,
+                            momentId,
+                            reason.trim(),
+                            Constants.REPORT_STATUS_PENDING,
+                            Timestamp.now(),
+                            "",
+                            null
+                    );
+
+                    db.collection(Constants.COLLECTION_REPORTS)
+                            .document(reportId)
+                            .set(report)
+                            .addOnSuccessListener(unused -> callback.onSuccess())
+                            .addOnFailureListener(e -> callback.onFailure("Không thể tạo báo cáo: " + e.getMessage()));
+                })
+                .addOnFailureListener(e -> callback.onFailure("Không thể kiểm tra báo cáo trùng: " + e.getMessage()));
     }
 
     public void ignoreReport(@NonNull String reportId,
