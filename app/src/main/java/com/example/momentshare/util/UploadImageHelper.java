@@ -14,6 +14,20 @@ public class UploadImageHelper {
         void onFailure(@NonNull String errorMessage);
     }
 
+    /**
+     * Người 5 thực hiện: bật chế độ demo khi Firebase Storage chưa dùng được do yêu cầu nâng cấp billing.
+     *
+     * true  = không upload lên Firebase Storage, dùng ảnh mẫu URL để demo luồng gửi/xem/reaction/report.
+     * false = upload ảnh thật lên Firebase Storage khi project đã bật Storage/Blaze.
+     */
+    private static final boolean USE_DEMO_IMAGE_URL = true;
+
+    /**
+     * Người 5 thực hiện: URL ảnh mẫu dùng cho demo khi chưa bật Firebase Storage.
+     */
+    private static final String DEMO_MOMENT_IMAGE_URL =
+            "https://picsum.photos/seed/momentshare-moment/800/1200";
+
     private final StorageReference storageReference;
 
     public UploadImageHelper() {
@@ -24,25 +38,28 @@ public class UploadImageHelper {
                                   @NonNull Uri imageUri,
                                   @NonNull UploadCallback callback) {
 
-        // Tạo tên file duy nhất dựa trên thời gian
+        /**
+         * Người 5 thực hiện:
+         * Nếu đang demo và chưa bật Storage/Blaze, không gọi putFile().
+         * Hệ thống trả về URL ảnh mẫu để MomentRepository vẫn tạo được moment,
+         * moment_receivers và notifications trong Firestore.
+         */
+        if (USE_DEMO_IMAGE_URL) {
+            callback.onSuccess(DEMO_MOMENT_IMAGE_URL);
+            return;
+        }
+
         String fileName = senderId + "_" + System.currentTimeMillis() + ".jpg";
         StorageReference imageRef = storageReference.child("moments").child(fileName);
 
-        // Bỏ qua nén ảnh bị lỗi trên Android mới, upload thẳng file gốc bằng Uri
-        uploadOriginalFile(imageRef, imageUri, callback);
-    }
-
-    private void uploadOriginalFile(StorageReference imageRef, Uri imageUri, UploadCallback callback) {
         imageRef.putFile(imageUri)
                 .addOnSuccessListener(taskSnapshot ->
                         imageRef.getDownloadUrl()
                                 .addOnSuccessListener(uri ->
                                         callback.onSuccess(uri.toString()))
                                 .addOnFailureListener(e ->
-                                        callback.onFailure("Không lấy được link: " + e.toString())))
-                .addOnFailureListener(e -> {
-                    // In ra CHI TIẾT lỗi (e.toString()) để biết chính xác do Firebase chặn hay do điện thoại
-                    callback.onFailure("Upload ảnh thất bại: " + e.toString());
-                });
+                                        callback.onFailure("Không lấy được link ảnh: " + e.getMessage())))
+                .addOnFailureListener(e ->
+                        callback.onFailure("Upload ảnh thất bại: " + e.getMessage()));
     }
 }
