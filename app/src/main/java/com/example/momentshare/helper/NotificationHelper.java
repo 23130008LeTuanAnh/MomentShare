@@ -8,7 +8,7 @@ import com.example.momentshare.util.Constants;
 /**
  * NotificationHelper tạo nội dung thông báo theo từng sự kiện nghiệp vụ.
  * File này thuộc phần Người 5 - Notification.
- * Bản hiện tại lưu thông báo trong app; có thể mở rộng sang Firebase Cloud Messaging sau.
+ * Bản cũ lưu thông báo trong app; Người 5 thực hiện đã bổ sung FCM token, service nhận push và Cloud Function gửi push thật.
  */
 public class NotificationHelper {
 
