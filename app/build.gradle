@@ -55,6 +55,9 @@ dependencies {
     // Firebase Storage dùng để upload avatar và hình ảnh khoảnh khắc.
     implementation libs.firebase.storage
 
+    // Người 5 thực hiện: Firebase Cloud Messaging dùng để nhận push notification thật từ Firebase.
+    implementation libs.firebase.messaging
+
     // Glide dùng để tải và hiển thị avatar từ URL.
     implementation libs.glide
 
