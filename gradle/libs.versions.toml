@@ -29,6 +29,8 @@ firebase-bom = { group = "com.google.firebase", name = "firebase-bom", version.r
 firebase-auth = { group = "com.google.firebase", name = "firebase-auth" }
 firebase-firestore = { group = "com.google.firebase", name = "firebase-firestore" }
 firebase-storage = { group = "com.google.firebase", name = "firebase-storage" }
+# Người 5 thực hiện: Firebase Cloud Messaging dùng để nhận push notification thật trên thiết bị.
+firebase-messaging = { group = "com.google.firebase", name = "firebase-messaging" }
 
 # Glide dùng để tải và hiển thị avatar từ URL
 glide = { group = "com.github.bumptech.glide", name = "glide", version.ref = "glide" }
