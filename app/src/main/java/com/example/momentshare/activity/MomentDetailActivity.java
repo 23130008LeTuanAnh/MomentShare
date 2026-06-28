@@ -8,16 +8,24 @@ import android.widget.ImageButton;
 import android.widget.ImageView;
 import android.widget.TextView;
 import android.widget.Toast;
+
+import androidx.annotation.NonNull;
 import androidx.appcompat.app.AppCompatActivity;
 import androidx.recyclerview.widget.LinearLayoutManager;
 import androidx.recyclerview.widget.RecyclerView;
 
 import com.bumptech.glide.Glide;
 import com.example.momentshare.R;
+import com.example.momentshare.model.NotificationModel;
 import com.example.momentshare.model.Reaction;
+import com.example.momentshare.model.User;
 import com.example.momentshare.repository.AdminRepository;
+import com.example.momentshare.repository.MomentRepository;
 import com.example.momentshare.repository.ReactionRepository;
+import com.example.momentshare.repository.UserRepository;
+import com.google.firebase.Timestamp;
 import com.google.firebase.auth.FirebaseAuth;
+import com.google.firebase.firestore.FirebaseFirestore;
 
 import java.text.SimpleDateFormat;
 import java.util.ArrayList;
@@ -45,6 +53,7 @@ public class MomentDetailActivity extends AppCompatActivity {
     private ReactionAdapter reactionAdapter;
     private ReactionRepository reactionRepository;
     private AdminRepository adminRepository; // Người 5 thực hiện: dùng để tạo report cho Admin xử lý.
+    private UserRepository userRepository;
 
     private String currentMomentId = "";
     private String currentSenderId = ""; // Người 5 thực hiện: lưu người gửi để không cho tự báo cáo ảnh của mình.
@@ -86,6 +95,7 @@ public class MomentDetailActivity extends AppCompatActivity {
 
         // Khởi tạo Repository và tải danh sách cảm xúc
         reactionRepository = new ReactionRepository();
+        userRepository = new UserRepository();
 
         // Người 5 thực hiện: AdminRepository tạo report khi user bấm Báo cáo ảnh.
         adminRepository = new AdminRepository();
@@ -100,6 +110,21 @@ public class MomentDetailActivity extends AppCompatActivity {
         setupReactionButton(R.id.btnWow, "\uD83D\uDE2E");
         setupReactionButton(R.id.btnSad, "\uD83D\uDE22");
         setupReactionButton(R.id.btnLike, "\uD83D\uDC4D");
+
+        MomentRepository momentRepository = new MomentRepository();
+
+        if (currentMomentId != null && !currentMomentId.isEmpty()) {
+            momentRepository.markMomentAsViewed(
+                    currentMomentId,
+                    currentUserId,
+                    new MomentRepository.ActionCallback() {
+                        @Override
+                        public void onSuccess() { }
+
+                        @Override
+                        public void onFailure(@NonNull String errorMessage) { }
+                    });
+        }
     }
 
     private void showMomentData() {
@@ -109,7 +134,21 @@ public class MomentDetailActivity extends AppCompatActivity {
         String caption = getIntent().getStringExtra(EXTRA_CAPTION);
         long createdAt = getIntent().getLongExtra(EXTRA_CREATED_AT, 0L);
 
-        txtDetailSender.setText(senderId == null || senderId.isEmpty() ? "Unknown sender" : senderId);
+        if (senderId == null || senderId.isEmpty()) {
+            txtDetailSender.setText("Unknown sender");
+        } else {
+            userRepository.getUserById(senderId, new UserRepository.UserCallback() {
+                @Override
+                public void onSuccess(User user) {
+                    txtDetailSender.setText(user.getFullName());
+                }
+
+                @Override
+                public void onFailure(String errorMessage) {
+                    txtDetailSender.setText("Unknown sender");
+                }
+            });
+        }
         txtDetailCaption.setText(caption == null || caption.isEmpty() ? "No caption" : caption);
         txtDetailTime.setText(createdAt == 0L ? "Just now" : formatTime(createdAt));
 
@@ -212,7 +251,14 @@ public class MomentDetailActivity extends AppCompatActivity {
     private void setupReactionButton(int buttonId, String reactionEmoji) {
         View button = findViewById(buttonId);
         button.setOnClickListener(v -> {
-            if (currentMomentId == null || currentMomentId.isEmpty()) return;
+            if (currentUserId.equals(currentSenderId)) {
+                Toast.makeText(
+                        this,
+                        "Bạn không thể thả cảm xúc vào ảnh của chính mình",
+                        Toast.LENGTH_SHORT
+                ).show();
+                return;
+            }
 
             boolean isChangingReaction = !selectedReaction.isEmpty() && !selectedReaction.equals(reactionEmoji);
 
@@ -224,6 +270,7 @@ public class MomentDetailActivity extends AppCompatActivity {
                     Toast.makeText(MomentDetailActivity.this, isChangingReaction ? "Đã đổi cảm xúc" : "Đã thả cảm xúc", Toast.LENGTH_SHORT).show();
 
                     loadReactions();
+                    sendReactionNotification(reactionEmoji);
                 }
 
                 @Override
@@ -232,6 +279,29 @@ public class MomentDetailActivity extends AppCompatActivity {
                 }
             });
         });
+    }
+    private void sendReactionNotification(String reactionEmoji) {
+        if (currentSenderId == null || currentSenderId.isEmpty()) return;
+        if (currentUserId == null || currentUserId.equals(currentSenderId)) return;
+
+        FirebaseFirestore db = FirebaseFirestore.getInstance();
+
+        String notificationId = db.collection("notifications")
+                .document()
+                .getId();
+
+        NotificationModel notification = new NotificationModel();
+        notification.setNotificationId(notificationId);
+        notification.setUserId(currentSenderId);
+        notification.setType("reaction");
+        notification.setTitle("Reaction mới");
+        notification.setMessage("Có người đã thả " + reactionEmoji + " vào khoảnh khắc của bạn.");
+        notification.setRead(false);
+        notification.setCreatedAt(Timestamp.now());
+
+        db.collection("notifications")
+                .document(notificationId)
+                .set(notification);
     }
 
     private String formatTime(long timeMillis) {

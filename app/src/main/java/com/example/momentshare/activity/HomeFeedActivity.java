@@ -75,13 +75,12 @@ public class HomeFeedActivity extends AppCompatActivity implements MomentAdapter
 
         if (currentUserId == null) return;
 
-        // 1. Lấy các bài viết được gửi riêng cho bạn (Logic cũ)
         momentRepository.getHomeFeed(currentUserId, new MomentRepository.MomentListCallback() {
             @Override
             public void onSuccess(List<Moment> privateMoments) {
                 final List<Moment> allMoments = new ArrayList<>(privateMoments);
 
-                // 2. Kéo thêm các bài viết được gắn nhãn công khai (isPublic == true) từ Firestore
+                // Kéo thêm các bài viết được gắn nhãn công khai
                 com.google.firebase.firestore.FirebaseFirestore.getInstance()
                         .collection("moments")
                         .whereEqualTo("isPublic", true)
@@ -110,7 +109,12 @@ public class HomeFeedActivity extends AppCompatActivity implements MomentAdapter
 
                             // Sắp xếp lại toàn bộ danh sách gộp theo thứ tự thời gian mới nhất lên đầu
                             java.util.Collections.sort(allMoments, (m1, m2) -> {
-                                if (m1.getCreatedAt() == null || m2.getCreatedAt() == null) return 0;
+                                if (m1.getCreatedAt() == null && m2.getCreatedAt() == null) return 0;
+
+                                if (m1.getCreatedAt() == null) return 1;
+
+                                if (m2.getCreatedAt() == null) return -1;
+
                                 return m2.getCreatedAt().compareTo(m1.getCreatedAt());
                             });
 
