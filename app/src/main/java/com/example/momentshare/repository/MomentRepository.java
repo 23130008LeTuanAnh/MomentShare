@@ -217,21 +217,49 @@ public class MomentRepository {
         });
     }
 
-    public void sendMoment(@NonNull String senderId,
-                           @NonNull Uri imageUri,
-                           String caption,
-                           @NonNull List<String> receiverIds,
-                           @NonNull SendMomentCallback callback) {
+    public void sendMoment(@NonNull String senderId, @NonNull Uri imageUri, @NonNull String caption,
+                           @Nullable List<String> receiverIds, @NonNull SendMomentCallback callback) {
 
-        if (receiverIds.isEmpty()) {
-            callback.onFailure("Vui lòng chọn ít nhất một người nhận");
-            return;
-        }
+        // ❌ ĐÃ XÓA ĐOẠN CODE CHẶN TRỐNG receiverIds ĐỂ CHO PHÉP ĐĂNG CÔNG KHAI
 
-        uploadImageHelper.uploadMomentImage(senderId, imageUri, new UploadImageHelper.UploadCallback() {
+        // 🛠️ SỬA LỖI: Khởi tạo đối tượng helper và truyền đúng 3 tham số (senderId, imageUri, callback)
+        UploadImageHelper uploadHelper = new UploadImageHelper();
+        uploadHelper.uploadMomentImage(senderId, imageUri, new UploadImageHelper.UploadCallback() {
             @Override
-            public void onSuccess(@NonNull String downloadUrl) {
-                createMomentRecords(senderId, downloadUrl, caption, receiverIds, callback);
+            public void onSuccess(@NonNull String imageUrl) {
+                // Xác định xem bài đăng có phải công khai hay không
+                boolean isPublic = (receiverIds == null || receiverIds.isEmpty());
+
+                Moment moment = new Moment();
+                moment.setSenderId(senderId);
+                moment.setImageUrl(imageUrl);
+                moment.setCaption(caption);
+                moment.setCreatedAt(Timestamp.now());
+                moment.setStatus(STATUS_ACTIVE);
+
+                DocumentReference momentRef = db.collection(COLLECTION_MOMENTS).document();
+                String momentId = momentRef.getId();
+                moment.setMomentId(momentId);
+
+                WriteBatch batch = db.batch();
+                // Đưa thông tin object moment vào
+                batch.set(momentRef, moment);
+                // Bổ sung thuộc tính isPublic trực tiếp vào Document Firestore
+                batch.update(momentRef, "isPublic", isPublic);
+
+                // Nếu KHÔNG PHẢI công khai (tức là có chọn bạn bè) thì mới lưu vào bảng trung gian
+                if (!isPublic) {
+                    for (String receiverId : receiverIds) {
+                        DocumentReference receiverRef = db.collection(COLLECTION_MOMENT_RECEIVERS).document();
+                        MomentReceiver mr = new MomentReceiver(receiverRef.getId(), momentId, receiverId, false, Timestamp.now());
+                        batch.set(receiverRef, mr);
+                    }
+                }
+
+                // Thực thi commit dữ liệu lên Firebase
+                batch.commit()
+                        .addOnSuccessListener(aVoid -> callback.onSuccess(momentId))
+                        .addOnFailureListener(e -> callback.onFailure(e.getMessage()));
             }
 
             @Override
