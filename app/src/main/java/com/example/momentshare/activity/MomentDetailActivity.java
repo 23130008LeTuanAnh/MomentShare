@@ -85,7 +85,16 @@ public class MomentDetailActivity extends AppCompatActivity {
         btnReportMoment = findViewById(R.id.btnReportMoment); // Người 5 thực hiện
         rvReactions = findViewById(R.id.rvReactions);
 
+        // Khởi tạo các Repository trước để chuẩn bị dữ liệu cho việc hiển thị
+        reactionRepository = new ReactionRepository();
+        userRepository = new UserRepository();
+
+        // Người 5 thực hiện: AdminRepository tạo report khi user bấm Báo cáo ảnh.
+        adminRepository = new AdminRepository();
+
         btnBack.setOnClickListener(v -> finish());
+
+        // Gọi hàm hiển thị dữ liệu sau khi userRepository đã khởi tạo xong để tránh NullPointerException
         showMomentData();
 
         // Cấu hình RecyclerView cho danh sách Reaction
@@ -93,12 +102,6 @@ public class MomentDetailActivity extends AppCompatActivity {
         reactionAdapter = new ReactionAdapter(new ArrayList<>());
         rvReactions.setAdapter(reactionAdapter);
 
-        // Khởi tạo Repository và tải danh sách cảm xúc
-        reactionRepository = new ReactionRepository();
-        userRepository = new UserRepository();
-
-        // Người 5 thực hiện: AdminRepository tạo report khi user bấm Báo cáo ảnh.
-        adminRepository = new AdminRepository();
         if (currentMomentId != null && !currentMomentId.isEmpty()) {
             loadReactions();
         }
@@ -111,7 +114,7 @@ public class MomentDetailActivity extends AppCompatActivity {
         setupReactionButton(R.id.btnSad, "\uD83D\uDE22");
         setupReactionButton(R.id.btnLike, "\uD83D\uDC4D");
 
-        MomentRepository momentRepository = new MomentRepository();
+        MomentRepository momentRepository = new MomentRepository(this);
 
         if (currentMomentId != null && !currentMomentId.isEmpty()) {
             momentRepository.markMomentAsViewed(
@@ -132,6 +135,8 @@ public class MomentDetailActivity extends AppCompatActivity {
         currentSenderId = senderId == null ? "" : senderId; // Người 5 thực hiện: giữ lại senderId để kiểm tra quyền báo cáo.
         String imageUrl = getIntent().getStringExtra(EXTRA_IMAGE_URL);
         String caption = getIntent().getStringExtra(EXTRA_CAPTION);
+
+        // SỬA Ở ĐÂY: Đổi sang nhận thời gian kiểu long thay vì Timestamp để tránh lỗi NullPointerException
         long createdAt = getIntent().getLongExtra(EXTRA_CREATED_AT, 0L);
 
         if (senderId == null || senderId.isEmpty()) {
@@ -150,6 +155,8 @@ public class MomentDetailActivity extends AppCompatActivity {
             });
         }
         txtDetailCaption.setText(caption == null || caption.isEmpty() ? "No caption" : caption);
+
+        // HIỂN THỊ THỜI GIAN THEO KIỂU LONG MỚI SỬA
         txtDetailTime.setText(createdAt == 0L ? "Just now" : formatTime(createdAt));
 
         if (imageUrl != null && !imageUrl.isEmpty()) {
