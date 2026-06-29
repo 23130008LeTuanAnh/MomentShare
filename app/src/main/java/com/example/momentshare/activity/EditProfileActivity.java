@@ -63,7 +63,7 @@ public class EditProfileActivity extends AppCompatActivity {
         userRepository = new UserRepository();
 
         // StorageRepository dùng để upload avatar lên Firebase Storage.
-        storageRepository = new StorageRepository();
+        storageRepository = new StorageRepository(this);
 
         initAvatarPicker();
         initViews();
