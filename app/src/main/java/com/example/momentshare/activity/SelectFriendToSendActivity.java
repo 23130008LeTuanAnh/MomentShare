@@ -46,7 +46,7 @@ public class SelectFriendToSendActivity extends AppCompatActivity {
         super.onCreate(savedInstanceState);
         setContentView(R.layout.activity_select_friend_send);
 
-        momentRepository = new MomentRepository();
+        momentRepository = new MomentRepository(this);
 
         initViews();
         readIntentData();
