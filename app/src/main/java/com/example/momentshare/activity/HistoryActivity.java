@@ -46,7 +46,7 @@ public class HistoryActivity extends AppCompatActivity implements HistoryAdapter
 
         btnBack.setOnClickListener(v -> finish());
 
-        momentRepository = new MomentRepository();
+        momentRepository = new MomentRepository(this);
 
         // Khởi tạo Adapter với danh sách rỗng ban đầu
         historyAdapter = new HistoryAdapter(historyMoments, this);
