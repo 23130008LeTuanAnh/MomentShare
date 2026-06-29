@@ -113,7 +113,8 @@ public class FriendAdapter extends RecyclerView.Adapter<FriendAdapter.FriendView
                         btn.setText("Phản hồi");
                         btn.setEnabled(true);
                         btn.setOnClickListener(v -> {
-                           // Navigate to FriendRequestActivity or similar
+                            Intent intent = new Intent(context, FriendRequestActivity.class);
+                            context.startActivity(intent);
                         });
                         break;
                     case "none":
