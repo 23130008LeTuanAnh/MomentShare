@@ -76,7 +76,7 @@ public class ProfileActivity extends AppCompatActivity {
         userRepository = new UserRepository();
 
         // Người 1 thực hiện: MomentRepository dùng để đếm số ảnh đã gửi/đã nhận thật trên Firestore.
-        momentRepository = new MomentRepository();
+        momentRepository = new MomentRepository(this);
 
         initViews();
         setupEvents();
