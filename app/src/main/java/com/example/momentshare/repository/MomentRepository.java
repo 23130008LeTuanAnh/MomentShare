@@ -81,10 +81,9 @@ public class MomentRepository {
 
     private final FirebaseFirestore db;
     private final UploadImageHelper uploadImageHelper;
-
-    public MomentRepository() {
+    public MomentRepository(android.content.Context context) {
         db = FirebaseFirestore.getInstance();
-        uploadImageHelper = new UploadImageHelper();
+        uploadImageHelper = new UploadImageHelper(context); // Truyền context vào
     }
 
     public void loadSelectableFriends(@NonNull String currentUserId,
@@ -220,8 +219,7 @@ public class MomentRepository {
     public void sendMoment(@NonNull String senderId, @NonNull Uri imageUri, @NonNull String caption,
                            @Nullable List<String> receiverIds, @NonNull SendMomentCallback callback) {
 
-        UploadImageHelper uploadHelper = new UploadImageHelper();
-        uploadHelper.uploadMomentImage(senderId, imageUri, new UploadImageHelper.UploadCallback() {
+        uploadImageHelper.uploadMomentImage(senderId, imageUri, new UploadImageHelper.UploadCallback() {
             @Override
             public void onSuccess(@NonNull String imageUrl) {
                 // Xác định xem bài đăng có phải công khai hay không
