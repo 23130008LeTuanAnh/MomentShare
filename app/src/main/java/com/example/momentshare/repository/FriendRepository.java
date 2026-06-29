@@ -21,9 +21,13 @@ import java.util.Map;
 public class FriendRepository {
 
     private final FirebaseFirestore db;
+    private final NotificationRepository notificationRepository;
+    private final UserRepository userRepository;
 
     public FriendRepository() {
         db = FirebaseFirestore.getInstance();
+        notificationRepository = new NotificationRepository();
+        userRepository = new UserRepository();
     }
 
     public interface ActionCallback {
@@ -47,18 +51,21 @@ public class FriendRepository {
     }
 
     /**
-     * Tìm kiếm người dùng theo username hoặc email.
+     * Tìm kiếm người dùng theo username hoặc email (tìm gần đúng từ đầu).
      */
     public void searchUsers(String query, UserListCallback callback) {
-        String rawQuery = query == null ? "" : query.trim();
-        // Người 1 thực hiện: chuẩn hóa từ khóa tìm kiếm để email viết hoa vẫn tìm đúng user.
-        String normalizedUsername = ValidationUtils.normalizeUsername(rawQuery);
-        String normalizedEmail = ValidationUtils.normalizeEmail(rawQuery);
+        String rawQuery = query == null ? "" : query.trim().toLowerCase();
+        if (rawQuery.isEmpty()) {
+            callback.onSuccess(new ArrayList<>());
+            return;
+        }
 
-        // Firestore không hỗ trợ tìm kiếm mờ tốt, ở đây tìm chính xác username hoặc email.
-        // Người 1 thực hiện: username và email đều được chuẩn hóa chữ thường để tránh lệch khi người dùng nhập Email viết hoa.
+        // Tìm gần đúng theo username (bắt đầu bằng query)
         db.collection(Constants.COLLECTION_USERS)
-                .whereEqualTo("username", normalizedUsername)
+                .orderBy("username")
+                .startAt(rawQuery)
+                .endAt(rawQuery + "\uf8ff")
+                .limit(20)
                 .get()
                 .addOnSuccessListener(querySnapshot -> {
                     List<User> users = new ArrayList<>();
@@ -74,43 +81,83 @@ public class FriendRepository {
                         return;
                     }
 
-                    searchUsersByEmail(normalizedEmail, callback);
+                    // Nếu không thấy username, tìm theo email (bắt đầu bằng query)
+                    db.collection(Constants.COLLECTION_USERS)
+                            .orderBy("email")
+                            .startAt(rawQuery)
+                            .endAt(rawQuery + "\uf8ff")
+                            .limit(20)
+                            .get()
+                            .addOnSuccessListener(emailSnapshot -> {
+                                for (DocumentSnapshot doc : emailSnapshot.getDocuments()) {
+                                    User user = doc.toObject(User.class);
+                                    if (user != null) {
+                                        users.add(user);
+                                    }
+                                }
+                                callback.onSuccess(users);
+                            })
+                            .addOnFailureListener(e -> callback.onFailure(e.getMessage()));
                 })
                 .addOnFailureListener(e -> callback.onFailure(e.getMessage()));
     }
 
     /**
-     * Người 1 thực hiện: tìm người dùng bằng email đã chuẩn hóa chữ thường.
-     */
-    private void searchUsersByEmail(String normalizedEmail, UserListCallback callback) {
-        db.collection(Constants.COLLECTION_USERS)
-                .whereEqualTo("email", normalizedEmail)
-                .get()
-                .addOnSuccessListener(emailSnapshot -> {
-                    List<User> users = new ArrayList<>();
-                    for (DocumentSnapshot doc : emailSnapshot.getDocuments()) {
-                        User user = doc.toObject(User.class);
-                        if (user != null) {
-                            users.add(user);
-                        }
-                    }
-                    callback.onSuccess(users);
-                })
-                .addOnFailureListener(e -> callback.onFailure(e.getMessage()));
-    }
-
-    /**
-     * Gửi lời mời kết bạn.
+     * Gửi lời mời kết bạn (tự kiểm tra trùng).
      */
     public void sendFriendRequest(String senderId, String receiverId, ActionCallback callback) {
-        String requestId = db.collection(Constants.COLLECTION_FRIEND_REQUESTS).document().getId();
-        FriendRequest request = new FriendRequest(requestId, senderId, receiverId, "pending", Timestamp.now());
+        // 1. Kiểm tra xem đã có lời mời hoặc đã là bạn chưa
+        checkFriendshipStatus(senderId, receiverId, new StatusCallback() {
+            @Override
+            public void onSuccess(String status) {
+                if (!"none".equals(status)) {
+                    callback.onFailure("Yêu cầu đã tồn tại hoặc đã là bạn bè");
+                    return;
+                }
 
-        db.collection(Constants.COLLECTION_FRIEND_REQUESTS)
-                .document(requestId)
-                .set(request)
-                .addOnSuccessListener(aVoid -> callback.onSuccess())
-                .addOnFailureListener(e -> callback.onFailure(e.getMessage()));
+                // 2. Tạo yêu cầu mới
+                String requestId = db.collection(Constants.COLLECTION_FRIEND_REQUESTS).document().getId();
+                FriendRequest request = new FriendRequest(requestId, senderId, receiverId, "pending", Timestamp.now());
+
+                db.collection(Constants.COLLECTION_FRIEND_REQUESTS)
+                        .document(requestId)
+                        .set(request)
+                        .addOnSuccessListener(aVoid -> {
+                            // 3. Tạo thông báo cho người nhận
+                            sendRequestNotification(senderId, receiverId);
+                            callback.onSuccess();
+                        })
+                        .addOnFailureListener(e -> callback.onFailure(e.getMessage()));
+            }
+
+            @Override
+            public void onFailure(String errorMessage) {
+                callback.onFailure(errorMessage);
+            }
+        });
+    }
+
+    private void sendRequestNotification(String senderId, String receiverId) {
+        userRepository.getUserById(senderId, new UserRepository.UserCallback() {
+            @Override
+            public void onSuccess(User sender) {
+                notificationRepository.createNotification(
+                        receiverId,
+                        Constants.NOTIFICATION_TYPE_FRIEND_REQUEST,
+                        "Lời mời kết bạn",
+                        sender.getFullName() + " (@" + sender.getUsername() + ") đã gửi lời mời kết bạn cho bạn.",
+                        new NotificationRepository.ActionCallback() {
+                            @Override
+                            public void onSuccess() {}
+                            @Override
+                            public void onFailure(@NonNull String errorMessage) {}
+                        }
+                );
+            }
+
+            @Override
+            public void onFailure(@NonNull String errorMessage) {}
+        });
     }
 
     /**
@@ -157,8 +204,35 @@ public class FriendRepository {
         batch.set(db.collection(Constants.COLLECTION_FRIENDS).document(receiverId + "_" + senderId), friend2);
 
         batch.commit()
-                .addOnSuccessListener(aVoid -> callback.onSuccess())
+                .addOnSuccessListener(aVoid -> {
+                    // Tạo thông báo cho người gửi lời mời
+                    sendAcceptNotification(senderId, receiverId);
+                    callback.onSuccess();
+                })
                 .addOnFailureListener(e -> callback.onFailure(e.getMessage()));
+    }
+
+    private void sendAcceptNotification(String senderId, String receiverId) {
+        userRepository.getUserById(receiverId, new UserRepository.UserCallback() {
+            @Override
+            public void onSuccess(User receiver) {
+                notificationRepository.createNotification(
+                        senderId,
+                        Constants.NOTIFICATION_TYPE_FRIEND_REQUEST,
+                        "Chấp nhận kết bạn",
+                        receiver.getFullName() + " (@" + receiver.getUsername() + ") đã chấp nhận lời mời kết bạn của bạn.",
+                        new NotificationRepository.ActionCallback() {
+                            @Override
+                            public void onSuccess() {}
+                            @Override
+                            public void onFailure(@NonNull String errorMessage) {}
+                        }
+                );
+            }
+
+            @Override
+            public void onFailure(@NonNull String errorMessage) {}
+        });
     }
 
     /**
