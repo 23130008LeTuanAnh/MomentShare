@@ -47,7 +47,7 @@ public class HomeFeedActivity extends AppCompatActivity implements MomentAdapter
         rvHomeFeed.setHasFixedSize(true);
 
         // Khởi tạo Repository để giao tiếp với Firebase
-        momentRepository = new MomentRepository();
+        momentRepository = new MomentRepository(this);
 
         // Khởi tạo Adapter với danh sách rỗng ban đầu, giao diện sẽ chưa hiện gì cả
         momentAdapter = new MomentAdapter(this, new ArrayList<>(), this);
