@@ -2,6 +2,7 @@ package com.example.momentshare.activity;
 
 import android.app.AlertDialog;
 import android.os.Bundle;
+import android.util.Log;
 import android.view.View;
 import android.widget.Button;
 import android.widget.ImageButton;
@@ -33,7 +34,16 @@ import java.util.Date;
 import java.util.List;
 import java.util.Locale;
 
+/**
+ * MomentDetailActivity hiển thị chi tiết khoảnh khắc.
+ *
+ * Đã chỉnh:
+ * - Không hiện Toast lỗi kỹ thuật FAILED_PRECONDITION khi tải reaction.
+ * - Nếu reaction query lỗi do index/mạng, giao diện detail vẫn hiển thị ảnh bình thường.
+ */
 public class MomentDetailActivity extends AppCompatActivity {
+
+    private static final String TAG = "MomentDetailActivity";
 
     public static final String EXTRA_MOMENT_ID = "extra_moment_id";
     public static final String EXTRA_SENDER_ID = "extra_sender_id";
@@ -48,7 +58,6 @@ public class MomentDetailActivity extends AppCompatActivity {
     private TextView txtSelectedReaction;
     private Button btnReportMoment; // Người 5 thực hiện: nút để user gửi báo cáo nội dung.
 
-    // Khai báo các thành phần mới cho Reaction
     private RecyclerView rvReactions;
     private ReactionAdapter reactionAdapter;
     private ReactionRepository reactionRepository;
@@ -69,11 +78,11 @@ public class MomentDetailActivity extends AppCompatActivity {
             finish();
             return;
         }
+
         currentUserId = FirebaseAuth.getInstance().getCurrentUser().getUid();
 
         setContentView(R.layout.activity_moment_detail);
 
-        // Lấy ID của bức ảnh hiện tại để truy vấn
         currentMomentId = getIntent().getStringExtra(EXTRA_MOMENT_ID);
 
         ImageButton btnBack = findViewById(R.id.btnBackDetail);
@@ -82,22 +91,17 @@ public class MomentDetailActivity extends AppCompatActivity {
         txtDetailCaption = findViewById(R.id.txtDetailCaption);
         txtDetailTime = findViewById(R.id.txtDetailTime);
         txtSelectedReaction = findViewById(R.id.txtSelectedReaction);
-        btnReportMoment = findViewById(R.id.btnReportMoment); // Người 5 thực hiện
+        btnReportMoment = findViewById(R.id.btnReportMoment);
         rvReactions = findViewById(R.id.rvReactions);
 
-        // Khởi tạo các Repository trước để chuẩn bị dữ liệu cho việc hiển thị
         reactionRepository = new ReactionRepository();
         userRepository = new UserRepository();
-
-        // Người 5 thực hiện: AdminRepository tạo report khi user bấm Báo cáo ảnh.
         adminRepository = new AdminRepository();
 
         btnBack.setOnClickListener(v -> finish());
 
-        // Gọi hàm hiển thị dữ liệu sau khi userRepository đã khởi tạo xong để tránh NullPointerException
         showMomentData();
 
-        // Cấu hình RecyclerView cho danh sách Reaction
         rvReactions.setLayoutManager(new LinearLayoutManager(this));
         reactionAdapter = new ReactionAdapter(new ArrayList<>());
         rvReactions.setAdapter(reactionAdapter);
@@ -115,29 +119,15 @@ public class MomentDetailActivity extends AppCompatActivity {
         setupReactionButton(R.id.btnSad, "\uD83D\uDE22");
         setupReactionButton(R.id.btnLike, "\uD83D\uDC4D");
 
-        MomentRepository momentRepository = new MomentRepository(this);
-
-        if (currentMomentId != null && !currentMomentId.isEmpty()) {
-            momentRepository.markMomentAsViewed(
-                    currentMomentId,
-                    currentUserId,
-                    new MomentRepository.ActionCallback() {
-                        @Override
-                        public void onSuccess() { }
-
-                        @Override
-                        public void onFailure(@NonNull String errorMessage) { }
-                    });
-        }
+        markMomentAsViewed();
     }
 
     private void showMomentData() {
         String senderId = getIntent().getStringExtra(EXTRA_SENDER_ID);
-        currentSenderId = senderId == null ? "" : senderId; // Người 5 thực hiện: giữ lại senderId để kiểm tra quyền báo cáo.
+        currentSenderId = senderId == null ? "" : senderId;
+
         String imageUrl = getIntent().getStringExtra(EXTRA_IMAGE_URL);
         String caption = getIntent().getStringExtra(EXTRA_CAPTION);
-
-        // SỬA Ở ĐÂY: Đổi sang nhận thời gian kiểu long thay vì Timestamp để tránh lỗi NullPointerException
         long createdAt = getIntent().getLongExtra(EXTRA_CREATED_AT, 0L);
 
         if (senderId == null || senderId.isEmpty()) {
@@ -146,7 +136,10 @@ public class MomentDetailActivity extends AppCompatActivity {
             userRepository.getUserById(senderId, new UserRepository.UserCallback() {
                 @Override
                 public void onSuccess(User user) {
-                    txtDetailSender.setText(user.getFullName());
+                    String fullName = user == null ? "" : user.getFullName();
+                    txtDetailSender.setText(fullName == null || fullName.trim().isEmpty()
+                            ? "Unknown sender"
+                            : fullName);
                 }
 
                 @Override
@@ -155,9 +148,8 @@ public class MomentDetailActivity extends AppCompatActivity {
                 }
             });
         }
-        txtDetailCaption.setText(caption == null || caption.isEmpty() ? "No caption" : caption);
 
-        // HIỂN THỊ THỜI GIAN THEO KIỂU LONG MỚI SỬA
+        txtDetailCaption.setText(caption == null || caption.isEmpty() ? "No caption" : caption);
         txtDetailTime.setText(createdAt == 0L ? "Just now" : formatTime(createdAt));
 
         if (imageUrl != null && !imageUrl.isEmpty()) {
@@ -167,7 +159,6 @@ public class MomentDetailActivity extends AppCompatActivity {
                     .into(imgDetailMoment);
         }
     }
-
 
     /**
      * Người 5 thực hiện: nối chức năng user tạo báo cáo nội dung từ màn hình chi tiết ảnh.
@@ -227,23 +218,30 @@ public class MomentDetailActivity extends AppCompatActivity {
         });
     }
 
-    // Hàm gọi Firebase để tải danh sách những người đã thả cảm xúc
+    /**
+     * Tải danh sách reaction.
+     *
+     * Đã chỉnh:
+     * - Không Toast lỗi kỹ thuật ra giao diện.
+     * - Khi lỗi Firestore index/mạng, chỉ để danh sách reaction trống và ghi Logcat.
+     */
     private void loadReactions() {
         reactionRepository.getReactionsForMoment(currentMomentId, new ReactionRepository.ReactionListCallback() {
             @Override
             public void onSuccess(List<Reaction> reactions) {
-                // Cập nhật danh sách lên màn hình
                 reactionAdapter.updateData(reactions);
 
                 boolean hasReacted = false;
-                for (Reaction r : reactions) {
-                    if (r.getUserId().equals(currentUserId)) {
-                        selectedReaction = r.getEmoji();
+
+                for (Reaction reaction : reactions) {
+                    if (reaction.getUserId() != null && reaction.getUserId().equals(currentUserId)) {
+                        selectedReaction = reaction.getEmoji() == null ? "" : reaction.getEmoji();
                         txtSelectedReaction.setText("Your reaction: " + selectedReaction);
                         hasReacted = true;
                         break;
                     }
                 }
+
                 if (!hasReacted) {
                     txtSelectedReaction.setText("Your reaction: none");
                 }
@@ -251,13 +249,18 @@ public class MomentDetailActivity extends AppCompatActivity {
 
             @Override
             public void onError(Exception e) {
-                Toast.makeText(MomentDetailActivity.this, "Lỗi tải cảm xúc: " + e.getMessage(), Toast.LENGTH_SHORT).show();
+                Log.w(TAG, "Không tải được reactions, ẩn lỗi kỹ thuật khỏi UI.", e);
+                reactionAdapter.updateData(new ArrayList<>());
+                txtSelectedReaction.setText(selectedReaction.isEmpty()
+                        ? "Your reaction: none"
+                        : "Your reaction: " + selectedReaction);
             }
         });
     }
 
     private void setupReactionButton(int buttonId, String reactionEmoji) {
         View button = findViewById(buttonId);
+
         button.setOnClickListener(v -> {
             if (currentUserId.equals(currentSenderId)) {
                 Toast.makeText(
@@ -275,7 +278,12 @@ public class MomentDetailActivity extends AppCompatActivity {
                 public void onSuccess() {
                     selectedReaction = reactionEmoji;
                     txtSelectedReaction.setText("Your reaction: " + selectedReaction);
-                    Toast.makeText(MomentDetailActivity.this, isChangingReaction ? "Đã đổi cảm xúc" : "Đã thả cảm xúc", Toast.LENGTH_SHORT).show();
+
+                    Toast.makeText(
+                            MomentDetailActivity.this,
+                            isChangingReaction ? "Đã đổi cảm xúc" : "Đã thả cảm xúc",
+                            Toast.LENGTH_SHORT
+                    ).show();
 
                     loadReactions();
                     sendReactionNotification(reactionEmoji);
@@ -288,6 +296,7 @@ public class MomentDetailActivity extends AppCompatActivity {
             });
         });
     }
+
     private void sendReactionNotification(String reactionEmoji) {
         if (currentSenderId == null || currentSenderId.isEmpty()) return;
         if (currentUserId == null || currentUserId.equals(currentSenderId)) return;
@@ -327,9 +336,29 @@ public class MomentDetailActivity extends AppCompatActivity {
 
             @Override
             public void onError(Exception e) {
+                Log.w(TAG, "Không tải được reaction của user hiện tại, giữ giao diện ổn định.", e);
+                selectedReaction = "";
                 txtSelectedReaction.setText("Your reaction: none");
             }
         });
+    }
+
+    private void markMomentAsViewed() {
+        if (currentMomentId == null || currentMomentId.isEmpty()) {
+            return;
+        }
+
+        MomentRepository momentRepository = new MomentRepository(this);
+        momentRepository.markMomentAsViewed(
+                currentMomentId,
+                currentUserId,
+                new MomentRepository.ActionCallback() {
+                    @Override
+                    public void onSuccess() { }
+
+                    @Override
+                    public void onFailure(@NonNull String errorMessage) { }
+                });
     }
 
     private String formatTime(long timeMillis) {
