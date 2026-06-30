@@ -23,15 +23,9 @@ import com.google.firebase.firestore.WriteBatch;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.HashSet;
-import java.util.HashMap;
 import java.util.LinkedHashSet;
 import java.util.List;
-import java.util.Map;
 import java.util.Set;
-import com.google.android.gms.tasks.Task;
-import com.google.android.gms.tasks.Tasks;
-import com.google.firebase.firestore.DocumentSnapshot;
-import com.google.firebase.firestore.QueryDocumentSnapshot;
 
 public class MomentRepository {
 
@@ -222,76 +216,64 @@ public class MomentRepository {
         });
     }
 
-    public void sendMoment(@NonNull String senderId,
-                           @NonNull Uri imageUri,
-                           @NonNull String caption,
-                           @Nullable List<String> receiverIds,
-                           @NonNull SendMomentCallback callback) {
+    /**
+     * Gửi khoảnh khắc cho một hoặc nhiều bạn bè.
+     *
+     * Đúng theo đề tài MomentShare:
+     * - Không đăng công khai.
+     * - Bắt buộc chọn ít nhất một người nhận.
+     * - Khi gửi thành công, tạo notification cho từng người nhận.
+     * - targetId của notification = momentId để NotificationActivity mở đúng MomentDetailActivity.
+     */
+    public void sendMoment(@NonNull String senderId, @NonNull Uri imageUri, @NonNull String caption,
+                           @Nullable List<String> receiverIds, @NonNull SendMomentCallback callback) {
+
+        List<String> validReceiverIds = normalizeReceiverIds(senderId, receiverIds);
+        if (validReceiverIds.isEmpty()) {
+            callback.onFailure("Vui lòng chọn ít nhất một bạn bè để gửi khoảnh khắc");
+            return;
+        }
 
         uploadImageHelper.uploadMomentImage(senderId, imageUri, new UploadImageHelper.UploadCallback() {
             @Override
             public void onSuccess(@NonNull String imageUrl) {
-                // Người 5 thực hiện: sau khi upload ảnh qua API ImgBB thành công,
-                // lưu moment vào Firestore kèm isPublic trong cùng một lần set.
-                // Không dùng batch.update() ngay sau batch.set() trên cùng document để tránh lỗi commit batch.
-                boolean isPublic = receiverIds == null || receiverIds.isEmpty();
-
-                DocumentReference momentRef = db.collection(COLLECTION_MOMENTS).document();
-                String momentId = momentRef.getId();
-
-                Map<String, Object> momentData = new HashMap<>();
-                momentData.put("momentId", momentId);
-                momentData.put("senderId", senderId);
-                momentData.put("imageUrl", imageUrl);
-                momentData.put("caption", caption == null ? "" : caption.trim());
-                momentData.put("createdAt", Timestamp.now());
-                momentData.put("status", STATUS_ACTIVE);
-                momentData.put("isPublic", isPublic);
-
-                WriteBatch batch = db.batch();
-                batch.set(momentRef, momentData);
-
-                if (!isPublic) {
-                    for (String receiverId : receiverIds) {
-                        if (receiverId == null || receiverId.trim().isEmpty()) {
-                            continue;
-                        }
-
-                        DocumentReference receiverRef = db.collection(COLLECTION_MOMENT_RECEIVERS).document();
-                        MomentReceiver receiver = new MomentReceiver();
-                        receiver.setId(receiverRef.getId());
-                        receiver.setMomentId(momentId);
-                        receiver.setReceiverId(receiverId);
-                        receiver.setViewed(false);
-                        receiver.setViewedAt(null);
-                        batch.set(receiverRef, receiver);
-
-                        // Người 5 thực hiện: tạo notification trong app cho người nhận ảnh.
-                        DocumentReference notificationRef = db.collection(COLLECTION_NOTIFICATIONS).document();
-                        NotificationModel notification = new NotificationModel();
-                        notification.setNotificationId(notificationRef.getId());
-                        notification.setUserId(receiverId);
-                        notification.setType("moment");
-                        notification.setTitle("Khoảnh khắc mới");
-                        notification.setMessage("Bạn vừa nhận được một khoảnh khắc mới.");
-                        notification.setRead(false);
-                        notification.setCreatedAt(Timestamp.now());
-                        batch.set(notificationRef, notification);
-                    }
-                }
-
-                batch.commit()
-                        .addOnSuccessListener(unused -> callback.onSuccess(momentId))
-                        .addOnFailureListener(e ->
-                                callback.onFailure("Upload ảnh thành công nhưng lưu Firestore thất bại: "
-                                        + e.getMessage()));
+                createMomentRecords(senderId, imageUrl, caption, validReceiverIds, callback);
             }
 
             @Override
             public void onFailure(@NonNull String errorMessage) {
-                callback.onFailure("Upload ảnh qua API thất bại: " + errorMessage);
+                callback.onFailure(errorMessage);
             }
         });
+    }
+
+    /**
+     * Loại bỏ receiverId rỗng, trùng nhau và chính người gửi.
+     */
+    @NonNull
+    private List<String> normalizeReceiverIds(@NonNull String senderId,
+                                              @Nullable List<String> receiverIds) {
+        List<String> result = new ArrayList<>();
+        if (receiverIds == null) {
+            return result;
+        }
+
+        Set<String> uniqueIds = new LinkedHashSet<>();
+        for (String receiverId : receiverIds) {
+            if (receiverId == null) {
+                continue;
+            }
+
+            String cleanId = receiverId.trim();
+            if (cleanId.isEmpty() || cleanId.equals(senderId)) {
+                continue;
+            }
+
+            uniqueIds.add(cleanId);
+        }
+
+        result.addAll(uniqueIds);
+        return result;
     }
 
     private void createMomentRecords(@NonNull String senderId,
@@ -309,7 +291,7 @@ public class MomentRepository {
         moment.setImageUrl(imageUrl);
         moment.setCaption(caption == null ? "" : caption.trim());
         moment.setCreatedAt(Timestamp.now());
-        moment.setStatus("active");
+        moment.setStatus(STATUS_ACTIVE);
 
         WriteBatch batch = db.batch();
         batch.set(momentRef, moment);
@@ -333,9 +315,10 @@ public class MomentRepository {
             NotificationModel notification = new NotificationModel();
             notification.setNotificationId(notificationRef.getId());
             notification.setUserId(receiverId);
-            notification.setType("moment");
+            notification.setType(Constants.NOTIFICATION_TYPE_MOMENT);
             notification.setTitle("Khoảnh khắc mới");
             notification.setMessage("Bạn vừa nhận được một khoảnh khắc mới.");
+            notification.setTargetId(momentId);
             notification.setRead(false);
             notification.setCreatedAt(Timestamp.now());
 
@@ -507,85 +490,5 @@ public class MomentRepository {
                 })
                 .addOnFailureListener(e ->
                         callback.onFailure(e.getMessage()));
-    }
-
-    /**
-     * Lấy toàn bộ danh sách khoảnh khắc do chính người dùng này gửi đi
-     */
-    public void getMomentsSentByUser(String currentUserId, MomentListCallback callback) {
-        db.collection("moments")
-                .whereEqualTo("senderId", currentUserId)
-                .get()
-                .addOnSuccessListener(queryDocumentSnapshots -> {
-                    List<Moment> sentMoments = new ArrayList<>();
-                    for (QueryDocumentSnapshot document : queryDocumentSnapshots) {
-                        Moment moment = document.toObject(Moment.class);
-                        if (moment != null) {
-                            // Đảm bảo luôn gán ID document phòng trường hợp đối tượng bị rỗng ID
-                            if (moment.getMomentId() == null || moment.getMomentId().isEmpty()) {
-                                moment.setMomentId(document.getId());
-                            }
-                            sentMoments.add(moment);
-                        }
-                    }
-                    callback.onSuccess(sentMoments);
-                })
-                .addOnFailureListener(e -> callback.onError(e));
-    }
-
-    /**
-     * Lấy toàn bộ danh sách khoảnh khắc mà người dùng này được nhận từ bạn bè
-     */
-    public void getMomentsReceivedByUser(String currentUserId, MomentListCallback callback) {
-        // 1. Tìm trong bảng trung gian COLLECTION_MOMENT_RECEIVERS xem user nhận được những momentId nào
-        db.collection(COLLECTION_MOMENT_RECEIVERS)
-                .whereEqualTo("receiverId", currentUserId)
-                .get()
-                .addOnSuccessListener(receiverSnapshots -> {
-                    if (receiverSnapshots.isEmpty()) {
-                        callback.onSuccess(new ArrayList<>());
-                        return;
-                    }
-
-                    List<String> momentIds = new ArrayList<>();
-                    for (QueryDocumentSnapshot doc : receiverSnapshots) {
-                        String mId = doc.getString("momentId");
-                        if (mId != null && !mId.isEmpty()) {
-                            momentIds.add(mId);
-                        }
-                    }
-
-                    if (momentIds.isEmpty()) {
-                        callback.onSuccess(new ArrayList<>());
-                        return;
-                    }
-
-                    // 2. Kéo thông tin chi tiết của từng bức ảnh từ danh sách ID tìm được ở trên
-                    List<Moment> receivedMoments = new ArrayList<>();
-                    List<Task<DocumentSnapshot>> tasks = new ArrayList<>();
-                    for (String id : momentIds) {
-                        tasks.add(db.collection("moments").document(id).get());
-                    }
-
-                    // Đợi tất cả các tiến trình tải ảnh đơn lẻ chạy xong thì gộp kết quả trả về UI
-                    Tasks.whenAllComplete(tasks).addOnCompleteListener(allTasks -> {
-                        for (Task<DocumentSnapshot> task : tasks) {
-                            if (task.isSuccessful() && task.getResult() != null) {
-                                DocumentSnapshot doc = task.getResult();
-                                if (doc.exists()) {
-                                    Moment moment = doc.toObject(Moment.class);
-                                    if (moment != null) {
-                                        if (moment.getMomentId() == null || moment.getMomentId().isEmpty()) {
-                                            moment.setMomentId(doc.getId());
-                                        }
-                                        receivedMoments.add(moment);
-                                    }
-                                }
-                            }
-                        }
-                        callback.onSuccess(receivedMoments);
-                    });
-                })
-                .addOnFailureListener(e -> callback.onError(e));
     }
 }

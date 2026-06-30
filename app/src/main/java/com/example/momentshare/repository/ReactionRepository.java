@@ -2,8 +2,11 @@ package com.example.momentshare.repository;
 
 import androidx.annotation.NonNull;
 
+import com.example.momentshare.model.NotificationModel;
 import com.example.momentshare.model.Reaction;
+import com.example.momentshare.util.Constants;
 import com.google.firebase.Timestamp;
+import com.google.firebase.firestore.DocumentReference;
 import com.google.firebase.firestore.DocumentSnapshot;
 import com.google.firebase.firestore.FirebaseFirestore;
 
@@ -72,6 +75,15 @@ public class ReactionRepository {
                 .addOnFailureListener(callback::onError);
     }
 
+    /**
+     * Lưu reaction của user cho một moment.
+     *
+     * Logic đúng theo đề tài:
+     * - Một user chỉ có một reaction trên một ảnh.
+     * - Nếu user đổi emoji thì cập nhật reaction cũ.
+     * - Chỉ tạo notification khi reaction mới hoặc emoji thay đổi.
+     * - Không gửi notification cho chính chủ ảnh nếu họ tự reaction.
+     */
     public void saveReaction(String momentId, String userId, String emoji, SaveReactionCallback callback) {
         if (momentId == null || momentId.trim().isEmpty()
                 || userId == null || userId.trim().isEmpty()
@@ -80,21 +92,85 @@ public class ReactionRepository {
             return;
         }
 
-        String reactionId = momentId + "_" + userId;
+        String cleanMomentId = momentId.trim();
+        String cleanUserId = userId.trim();
+        String cleanEmoji = emoji.trim();
+        String reactionId = cleanMomentId + "_" + cleanUserId;
+        DocumentReference reactionRef = db.collection(COLLECTION_REACTIONS).document(reactionId);
 
-        Reaction reaction = new Reaction(
-                reactionId,
-                momentId,
-                userId,
-                emoji,
-                Timestamp.now()
-        );
+        reactionRef.get()
+                .addOnSuccessListener(document -> {
+                    String oldEmoji = "";
+                    if (document.exists()) {
+                        Reaction oldReaction = document.toObject(Reaction.class);
+                        if (oldReaction != null && oldReaction.getEmoji() != null) {
+                            oldEmoji = oldReaction.getEmoji().trim();
+                        }
+                    }
 
-        db.collection(COLLECTION_REACTIONS)
-                .document(reactionId)
-                .set(reaction)
-                .addOnSuccessListener(unused -> callback.onSuccess())
+                    boolean shouldNotifyOwner = oldEmoji.isEmpty() || !oldEmoji.equals(cleanEmoji);
+
+                    Reaction reaction = new Reaction(
+                            reactionId,
+                            cleanMomentId,
+                            cleanUserId,
+                            cleanEmoji,
+                            Timestamp.now()
+                    );
+
+                    reactionRef.set(reaction)
+                            .addOnSuccessListener(unused -> {
+                                if (shouldNotifyOwner) {
+                                    createReactionNotification(cleanMomentId, cleanUserId, cleanEmoji, callback);
+                                } else {
+                                    callback.onSuccess();
+                                }
+                            })
+                            .addOnFailureListener(callback::onError);
+                })
                 .addOnFailureListener(callback::onError);
+    }
+
+    /**
+     * Tạo notification cho chủ khoảnh khắc khi có người thả/đổi reaction.
+     * Reaction đã lưu thành công thì lỗi tạo notification không làm hủy thao tác reaction.
+     */
+    private void createReactionNotification(@NonNull String momentId,
+                                            @NonNull String reactorId,
+                                            @NonNull String emoji,
+                                            @NonNull SaveReactionCallback callback) {
+        db.collection(Constants.COLLECTION_MOMENTS)
+                .document(momentId)
+                .get()
+                .addOnSuccessListener(momentDocument -> {
+                    if (!momentDocument.exists()) {
+                        callback.onSuccess();
+                        return;
+                    }
+
+                    String ownerId = momentDocument.getString("senderId");
+                    if (ownerId == null || ownerId.trim().isEmpty() || ownerId.equals(reactorId)) {
+                        callback.onSuccess();
+                        return;
+                    }
+
+                    DocumentReference notificationRef = db.collection(Constants.COLLECTION_NOTIFICATIONS).document();
+
+                    NotificationModel notification = new NotificationModel();
+                    notification.setNotificationId(notificationRef.getId());
+                    notification.setUserId(ownerId);
+                    notification.setType(Constants.NOTIFICATION_TYPE_REACTION);
+                    notification.setTitle("Reaction mới");
+                    notification.setMessage("Có người đã thả " + emoji + " vào khoảnh khắc của bạn.");
+                    notification.setTargetId(momentId);
+                    notification.setRead(false);
+                    notification.setCreatedAt(Timestamp.now());
+
+                    notificationRef.set(notification)
+                            .addOnSuccessListener(unused -> callback.onSuccess())
+                            .addOnFailureListener(e -> callback.onSuccess());
+                })
+                .addOnFailureListener(e -> callback.onSuccess());
     }
 
     public void getUserReaction(String momentId, String userId, SaveUserReactionCallback callback) {
