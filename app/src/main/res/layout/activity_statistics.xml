@@ -1,49 +1,80 @@
 <?xml version="1.0" encoding="utf-8"?>
 
 <!--
-    Người 5 thêm: layout thống kê hệ thống.
-    Dùng để trình bày nhanh số người dùng, khoảnh khắc và báo cáo khi demo.
+    Statistics redesigned.
+    Giữ nguyên id: progressBar, txtStatisticsContent, btnReloadStatistics.
 -->
-<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
+<ScrollView xmlns:android="http://schemas.android.com/apk/res/android"
     android:layout_width="match_parent"
     android:layout_height="match_parent"
-    android:background="#FFFFFF"
-    android:orientation="vertical"
-    android:padding="24dp">
+    android:background="@drawable/bg_admin_screen"
+    android:fillViewport="true">
 
-    <TextView
+    <LinearLayout
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
-        android:layout_marginTop="32dp"
-        android:text="Thống kê hệ thống"
-        android:textColor="#111827"
-        android:textSize="26sp"
-        android:textStyle="bold" />
+        android:orientation="vertical"
+        android:paddingStart="18dp"
+        android:paddingTop="26dp"
+        android:paddingEnd="18dp"
+        android:paddingBottom="24dp">
 
-    <ProgressBar
-        android:id="@+id/progressBar"
-        android:layout_width="wrap_content"
-        android:layout_height="wrap_content"
-        android:layout_gravity="center_horizontal"
-        android:layout_marginTop="20dp"
-        android:visibility="gone" />
+        <LinearLayout
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:background="@drawable/bg_admin_hero"
+            android:elevation="5dp"
+            android:orientation="vertical"
+            android:padding="20dp">
 
-    <TextView
-        android:id="@+id/txtStatisticsContent"
-        android:layout_width="match_parent"
-        android:layout_height="wrap_content"
-        android:layout_marginTop="24dp"
-        android:lineSpacingExtra="6dp"
-        android:text="Đang tải thống kê..."
-        android:textColor="#222222"
-        android:textSize="18sp" />
+            <TextView
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:text="Thống kê hệ thống"
+                android:textColor="#171717"
+                android:textSize="27sp"
+                android:textStyle="bold" />
 
-    <Button
-        android:id="@+id/btnReloadStatistics"
-        android:layout_width="match_parent"
-        android:layout_height="wrap_content"
-        android:layout_marginTop="24dp"
-        android:minHeight="50dp"
-        android:text="Tải lại thống kê"
-        android:textAllCaps="false" />
-</LinearLayout>
+            <TextView
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:layout_marginTop="6dp"
+                android:text="Tổng hợp nhanh dữ liệu để demo phần quản trị MomentShare."
+                android:textColor="#5F5F5F"
+                android:textSize="14sp" />
+        </LinearLayout>
+
+        <ProgressBar
+            android:id="@+id/progressBar"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:layout_gravity="center_horizontal"
+            android:layout_marginTop="18dp"
+            android:visibility="gone" />
+
+        <TextView
+            android:id="@+id/txtStatisticsContent"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="18dp"
+            android:background="@drawable/bg_admin_text_panel"
+            android:lineSpacingExtra="7dp"
+            android:padding="18dp"
+            android:text="Đang tải thống kê..."
+            android:textColor="#171717"
+            android:textSize="17sp" />
+
+        <Button
+            android:id="@+id/btnReloadStatistics"
+            android:layout_width="match_parent"
+            android:layout_height="54dp"
+            android:layout_marginTop="18dp"
+            android:background="@drawable/bg_admin_button_dark"
+            android:backgroundTint="@null"
+            android:text="Tải lại thống kê"
+            android:textAllCaps="false"
+            android:textColor="#FFFFFF"
+            android:textSize="15sp"
+            android:textStyle="bold" />
+    </LinearLayout>
+</ScrollView>
