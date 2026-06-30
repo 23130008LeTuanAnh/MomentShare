@@ -17,10 +17,8 @@
         <item name="android:statusBarColor">@color/ms_screen</item>
         <item name="android:navigationBarColor">@color/ms_surface</item>
         <item name="android:windowLightStatusBar">true</item>
-        <item name="android:windowLightNavigationBar">true</item>
 
         <!-- Không cho Android tự ép giao diện tối gây đen màn hình -->
-        <item name="android:forceDarkAllowed">false</item>
 
         <!-- Font mặc định -->
         <item name="android:fontFamily">sans</item>
