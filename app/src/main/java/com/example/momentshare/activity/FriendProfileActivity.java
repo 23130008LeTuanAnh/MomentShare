@@ -1,5 +1,6 @@
 package com.example.momentshare.activity;
 
+import android.content.Intent;
 import android.os.Bundle;
 import android.widget.Button;
 import android.widget.ImageButton;
@@ -29,6 +30,8 @@ public class FriendProfileActivity extends AppCompatActivity {
     private UserRepository userRepository;
     private String currentUserId;
     private String friendId;
+    private String friendName = "";
+    private String friendAvatarUrl = "";
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -66,12 +69,17 @@ public class FriendProfileActivity extends AppCompatActivity {
         userRepository.getUserById(friendId, new UserRepository.UserCallback() {
             @Override
             public void onSuccess(User user) {
-                txtName.setText(user.getFullName());
+                friendName = user.getFullName() == null || user.getFullName().trim().isEmpty()
+                        ? "Bạn bè"
+                        : user.getFullName().trim();
+                friendAvatarUrl = user.getAvatarUrl() == null ? "" : user.getAvatarUrl();
+
+                txtName.setText(friendName);
                 txtUsername.setText("@" + user.getUsername());
                 txtBio.setText(user.getBio() == null || user.getBio().isEmpty() ? "Chưa có bio" : user.getBio());
-                
-                if (user.getAvatarUrl() != null && !user.getAvatarUrl().isEmpty()) {
-                    Glide.with(FriendProfileActivity.this).load(user.getAvatarUrl()).circleCrop().into(imgAvatar);
+
+                if (!friendAvatarUrl.isEmpty()) {
+                    Glide.with(FriendProfileActivity.this).load(friendAvatarUrl).circleCrop().into(imgAvatar);
                 }
             }
 
@@ -86,7 +94,11 @@ public class FriendProfileActivity extends AppCompatActivity {
         btnBack.setOnClickListener(v -> finish());
 
         btnChat.setOnClickListener(v -> {
-            Toast.makeText(this, "Chức năng chat sẽ được cập nhật sau", Toast.LENGTH_SHORT).show();
+            Intent intent = new Intent(FriendProfileActivity.this, ChatActivity.class);
+            intent.putExtra(ChatActivity.EXTRA_FRIEND_ID, friendId);
+            intent.putExtra(ChatActivity.EXTRA_FRIEND_NAME, friendName);
+            intent.putExtra(ChatActivity.EXTRA_FRIEND_AVATAR, friendAvatarUrl);
+            startActivity(intent);
         });
 
         btnUnfriend.setOnClickListener(v -> {

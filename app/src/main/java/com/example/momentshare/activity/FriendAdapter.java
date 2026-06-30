@@ -65,6 +65,7 @@ public class FriendAdapter extends RecyclerView.Adapter<FriendAdapter.FriendView
         User user = userList.get(position);
         String userId = user == null ? "" : safeText(user.getUserId(), "");
         holder.btnAction.setTag(userId);
+        holder.btnMessage.setTag(userId);
 
         holder.txtName.setText(safeText(user == null ? null : user.getFullName(), "Người dùng MomentShare"));
         holder.txtUsername.setText("@" + safeText(user == null ? null : user.getUsername(), "unknown"));
@@ -83,8 +84,11 @@ public class FriendAdapter extends RecyclerView.Adapter<FriendAdapter.FriendView
 
         holder.itemView.setOnClickListener(null);
         holder.btnAction.setOnClickListener(null);
+        holder.btnMessage.setOnClickListener(null);
         holder.btnAction.setVisibility(View.VISIBLE);
+        holder.btnMessage.setVisibility(isSearchMode ? View.GONE : View.VISIBLE);
         holder.btnAction.setEnabled(true);
+        holder.btnMessage.setEnabled(true);
 
         if (isSearchMode) {
             setupSearchAction(holder, user);
@@ -196,11 +200,30 @@ public class FriendAdapter extends RecyclerView.Adapter<FriendAdapter.FriendView
             context.startActivity(intent);
         });
 
+        holder.btnMessage.setText("Nhắn tin");
+        holder.btnMessage.setEnabled(true);
+        holder.btnMessage.setBackgroundColor(Color.parseColor("#7353C4"));
+        holder.btnMessage.setTextColor(Color.WHITE);
+        holder.btnMessage.setOnClickListener(v -> openChat(user));
+
         holder.btnAction.setText("Hủy kết bạn");
         holder.btnAction.setEnabled(true);
         holder.btnAction.setBackgroundColor(Color.parseColor("#E53935"));
         holder.btnAction.setTextColor(Color.WHITE);
         holder.btnAction.setOnClickListener(v -> showUnfriendConfirmDialog(holder, user));
+    }
+
+    private void openChat(User user) {
+        if (user == null || user.getUserId() == null || user.getUserId().trim().isEmpty()) {
+            Toast.makeText(context, "Không xác định được bạn bè", Toast.LENGTH_SHORT).show();
+            return;
+        }
+
+        Intent intent = new Intent(context, ChatActivity.class);
+        intent.putExtra(ChatActivity.EXTRA_FRIEND_ID, user.getUserId());
+        intent.putExtra(ChatActivity.EXTRA_FRIEND_NAME, safeText(user.getFullName(), "Bạn bè"));
+        intent.putExtra(ChatActivity.EXTRA_FRIEND_AVATAR, user.getAvatarUrl());
+        context.startActivity(intent);
     }
 
     private void showUnfriendConfirmDialog(@NonNull FriendViewHolder holder, User user) {
@@ -265,6 +288,7 @@ public class FriendAdapter extends RecyclerView.Adapter<FriendAdapter.FriendView
         TextView txtUsername;
         TextView txtEmail;
         Button btnAction;
+        Button btnMessage;
 
         public FriendViewHolder(@NonNull View itemView) {
             super(itemView);
@@ -273,6 +297,7 @@ public class FriendAdapter extends RecyclerView.Adapter<FriendAdapter.FriendView
             txtUsername = itemView.findViewById(R.id.txtFriendUsername);
             txtEmail = itemView.findViewById(R.id.txtFriendEmail);
             btnAction = itemView.findViewById(R.id.btnFriendAction);
+            btnMessage = itemView.findViewById(R.id.btnMessageFriend);
         }
     }
 }

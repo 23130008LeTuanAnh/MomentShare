@@ -31,6 +31,7 @@ public class FriendListActivity extends AppCompatActivity {
     private ImageButton btnBack;
     private ImageButton btnAdd;
     private ImageButton btnRefresh;
+    private ImageButton btnChatList;
     private ProgressBar progressBar;
     private TextView txtNoFriend;
     private TextView txtFriendCount;
@@ -73,6 +74,7 @@ public class FriendListActivity extends AppCompatActivity {
         btnBack = findViewById(R.id.btnBackFriendList);
         btnAdd = findViewById(R.id.btnAddFriend);
         btnRefresh = findViewById(R.id.btnRefreshFriendList);
+        btnChatList = findViewById(R.id.btnChatListFromFriendList);
         progressBar = findViewById(R.id.progressBarFriendList);
         txtNoFriend = findViewById(R.id.txtNoFriend);
         txtFriendCount = findViewById(R.id.txtFriendCount);
@@ -94,6 +96,7 @@ public class FriendListActivity extends AppCompatActivity {
         btnBack.setOnClickListener(v -> finish());
         btnAdd.setOnClickListener(v -> startActivity(new Intent(this, SearchFriendActivity.class)));
         btnRefresh.setOnClickListener(v -> loadFriendList());
+        btnChatList.setOnClickListener(v -> startActivity(new Intent(this, ChatListActivity.class)));
 
         edtSearchFriendList.addTextChangedListener(new android.text.TextWatcher() {
             @Override
@@ -181,6 +184,7 @@ public class FriendListActivity extends AppCompatActivity {
         txtNoFriend.setVisibility(View.GONE);
         btnAdd.setEnabled(!isLoading);
         btnRefresh.setEnabled(!isLoading);
+        btnChatList.setEnabled(!isLoading);
     }
 
     private void removeUserFromList(List<User> users, User removedUser) {

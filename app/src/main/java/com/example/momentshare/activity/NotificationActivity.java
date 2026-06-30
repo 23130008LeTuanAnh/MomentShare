@@ -141,6 +141,15 @@ public class NotificationActivity extends AppCompatActivity {
             return;
         }
 
+        if (Constants.NOTIFICATION_TYPE_MESSAGE.equals(type)) {
+            Intent intent = new Intent(this, ChatActivity.class);
+            if (!targetId.isEmpty()) {
+                intent.putExtra(ChatActivity.EXTRA_FRIEND_ID, targetId);
+            }
+            startActivity(intent);
+            return;
+        }
+
         if ((Constants.NOTIFICATION_TYPE_REACTION.equals(type)
                 || Constants.NOTIFICATION_TYPE_MOMENT.equals(type))
                 && !targetId.isEmpty()) {
