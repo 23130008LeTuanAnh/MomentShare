@@ -4,7 +4,7 @@ junit = "4.13.2"
 junitVersion = "1.1.5"
 espressoCore = "3.5.1"
 appcompat = "1.6.1"
-material = "1.10.0"
+material = "1.12.0"
 activityKtx = "1.8.0"
 constraintlayout = "2.1.4"
 
@@ -14,6 +14,16 @@ firebaseBom = "34.8.0"
 
 # Image loading
 glide = "4.16.0"
+
+# UI XML support
+recyclerview = "1.4.0"
+cardview = "1.0.0"
+swiperefreshlayout = "1.2.0"
+lottie = "6.6.9"
+shimmer = "0.5.0"
+viewpager2 = "1.1.0"
+flexbox = "3.0.0"
+splashscreen = "1.0.1"
 
 [libraries]
 junit = { group = "junit", name = "junit", version.ref = "junit" }
@@ -29,14 +39,23 @@ firebase-bom = { group = "com.google.firebase", name = "firebase-bom", version.r
 firebase-auth = { group = "com.google.firebase", name = "firebase-auth" }
 firebase-firestore = { group = "com.google.firebase", name = "firebase-firestore" }
 firebase-storage = { group = "com.google.firebase", name = "firebase-storage" }
-# Người 5 thực hiện: Firebase Cloud Messaging dùng để nhận push notification thật trên thiết bị.
 firebase-messaging = { group = "com.google.firebase", name = "firebase-messaging" }
 
-# Glide dùng để tải và hiển thị avatar từ URL
+# Glide dùng để tải và hiển thị avatar, ảnh bài đăng từ URL.
 glide = { group = "com.github.bumptech.glide", name = "glide", version.ref = "glide" }
+
+# UI XML support libraries
+recyclerview = { group = "androidx.recyclerview", name = "recyclerview", version.ref = "recyclerview" }
+cardview = { group = "androidx.cardview", name = "cardview", version.ref = "cardview" }
+swiperefreshlayout = { group = "androidx.swiperefreshlayout", name = "swiperefreshlayout", version.ref = "swiperefreshlayout" }
+lottie = { group = "com.airbnb.android", name = "lottie", version.ref = "lottie" }
+shimmer = { group = "com.facebook.shimmer", name = "shimmer", version.ref = "shimmer" }
+viewpager2 = { group = "androidx.viewpager2", name = "viewpager2", version.ref = "viewpager2" }
+flexbox = { group = "com.google.android.flexbox", name = "flexbox", version.ref = "flexbox" }
+splashscreen = { group = "androidx.core", name = "core-splashscreen", version.ref = "splashscreen" }
 
 [plugins]
 android-application = { id = "com.android.application", version.ref = "agp" }
 
-# Google Services plugin dùng để đọc file google-services.json
+# Google Services plugin dùng để đọc file google-services.json.
 google-services = { id = "com.google.gms.google-services", version.ref = "googleServices" }
