@@ -19,8 +19,9 @@ import java.util.List;
  * NotificationRepository xử lý dữ liệu thông báo trong collection notifications.
  *
  * Đã chỉnh:
- * - Thêm countUnreadNotifications() để ProfileActivity hiển thị số thông báo chưa đọc.
- * - Đếm unread bằng Java sau khi query theo userId để tránh lỗi composite index.
+ * - Thêm targetId cho notification để click điều hướng đúng màn hình.
+ * - Thêm countUnreadNotifications() để Profile hiển thị số thông báo chưa đọc.
+ * - Đếm bằng Java sau khi query theo userId để tránh composite index.
  */
 public class NotificationRepository {
 
@@ -50,6 +51,24 @@ public class NotificationRepository {
                                    @NonNull String title,
                                    @NonNull String message,
                                    @NonNull ActionCallback callback) {
+        createNotification(userId, type, title, message, "", callback);
+    }
+
+    /**
+     * Tạo thông báo kèm targetId.
+     * targetId giúp NotificationActivity biết cần mở lời mời kết bạn hay moment detail.
+     */
+    public void createNotification(@NonNull String userId,
+                                   @NonNull String type,
+                                   @NonNull String title,
+                                   @NonNull String message,
+                                   @NonNull String targetId,
+                                   @NonNull ActionCallback callback) {
+        if (userId.trim().isEmpty()) {
+            callback.onFailure("Không xác định được người nhận thông báo");
+            return;
+        }
+
         DocumentReference notificationRef = db.collection(Constants.COLLECTION_NOTIFICATIONS).document();
 
         NotificationModel notification = new NotificationModel();
@@ -58,6 +77,7 @@ public class NotificationRepository {
         notification.setType(type);
         notification.setTitle(title);
         notification.setMessage(message);
+        notification.setTargetId(targetId == null ? "" : targetId);
         notification.setRead(false);
         notification.setCreatedAt(Timestamp.now());
 
@@ -91,9 +111,6 @@ public class NotificationRepository {
                 .addOnFailureListener(e -> callback.onFailure("Không tải được thông báo: " + e.getMessage()));
     }
 
-    /**
-     * Đếm số thông báo chưa đọc để hiển thị lên nút Thông báo.
-     */
     public void countUnreadNotifications(@NonNull String userId,
                                          @NonNull CountCallback callback) {
         loadNotifications(userId, new NotificationListCallback() {
@@ -117,6 +134,11 @@ public class NotificationRepository {
 
     public void markAsRead(@NonNull String notificationId,
                            @NonNull ActionCallback callback) {
+        if (notificationId.trim().isEmpty()) {
+            callback.onFailure("Không xác định được thông báo");
+            return;
+        }
+
         db.collection(Constants.COLLECTION_NOTIFICATIONS)
                 .document(notificationId)
                 .update("read", true, "isRead", true)
@@ -151,15 +173,9 @@ public class NotificationRepository {
             Timestamp leftTime = left.getCreatedAt();
             Timestamp rightTime = right.getCreatedAt();
 
-            if (leftTime == null && rightTime == null) {
-                return 0;
-            }
-            if (leftTime == null) {
-                return 1;
-            }
-            if (rightTime == null) {
-                return -1;
-            }
+            if (leftTime == null && rightTime == null) return 0;
+            if (leftTime == null) return 1;
+            if (rightTime == null) return -1;
             return rightTime.compareTo(leftTime);
         });
     }

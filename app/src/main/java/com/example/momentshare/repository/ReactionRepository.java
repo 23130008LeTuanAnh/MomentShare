@@ -14,9 +14,8 @@ import java.util.List;
  * ReactionRepository xử lý thả cảm xúc cho Moment.
  *
  * Đã chỉnh:
- * - Bỏ orderBy("createdAt") trong query getReactionsForMoment() để tránh lỗi
- *   FAILED_PRECONDITION: The query requires an index.
- * - Sắp xếp danh sách reaction bằng Java sau khi lấy dữ liệu từ Firestore.
+ * - Bỏ orderBy trong query để tránh lỗi FAILED_PRECONDITION do thiếu composite index.
+ * - Sort bằng Java ở phía client.
  */
 public class ReactionRepository {
 
@@ -44,12 +43,6 @@ public class ReactionRepository {
         void onError(Exception e);
     }
 
-    /**
-     * Lấy danh sách reaction của một Moment.
-     *
-     * Không dùng orderBy ở Firestore để app không bị yêu cầu tạo composite index.
-     * Thứ tự mới nhất trước được xử lý bằng Java ở phía client.
-     */
     public void getReactionsForMoment(@NonNull String momentId, @NonNull ReactionListCallback callback) {
         db.collection(COLLECTION_REACTIONS)
                 .whereEqualTo("momentId", momentId)
@@ -59,7 +52,6 @@ public class ReactionRepository {
 
                     for (DocumentSnapshot doc : snapshot.getDocuments()) {
                         Reaction reaction = doc.toObject(Reaction.class);
-
                         if (reaction != null) {
                             if (reaction.getReactionId() == null || reaction.getReactionId().trim().isEmpty()) {
                                 reaction.setReactionId(doc.getId());
@@ -80,12 +72,6 @@ public class ReactionRepository {
                 .addOnFailureListener(callback::onError);
     }
 
-    /**
-     * Lưu hoặc cập nhật reaction của user.
-     *
-     * Mỗi user chỉ có 1 reaction trên 1 moment.
-     * Document ID = momentId_userId để thả lại sẽ ghi đè reaction cũ.
-     */
     public void saveReaction(String momentId, String userId, String emoji, SaveReactionCallback callback) {
         if (momentId == null || momentId.trim().isEmpty()
                 || userId == null || userId.trim().isEmpty()
@@ -111,9 +97,6 @@ public class ReactionRepository {
                 .addOnFailureListener(callback::onError);
     }
 
-    /**
-     * Lấy reaction hiện tại của user trong moment.
-     */
     public void getUserReaction(String momentId, String userId, SaveUserReactionCallback callback) {
         if (momentId == null || momentId.trim().isEmpty()
                 || userId == null || userId.trim().isEmpty()) {
@@ -138,9 +121,6 @@ public class ReactionRepository {
                 .addOnFailureListener(callback::onError);
     }
 
-    /**
-     * Đếm tổng số reaction của một moment.
-     */
     public void countReactionsForMoment(@NonNull String momentId, @NonNull ReactionCountCallback callback) {
         db.collection(COLLECTION_REACTIONS)
                 .whereEqualTo("momentId", momentId)
