@@ -1,0 +1,222 @@
+rules_version = '2';
+
+service cloud.firestore {
+  match /databases/{database}/documents {
+
+    // Người 5 thực hiện: kiểm tra người dùng đã đăng nhập Firebase Authentication.
+    function isSignedIn() {
+      return request.auth != null;
+    }
+
+    // Người 5 thực hiện: lấy hồ sơ user hiện tại để kiểm tra role/status.
+    function currentUserDoc() {
+      return get(/databases/$(database)/documents/users/$(request.auth.uid));
+    }
+
+    // Người 5 thực hiện: chỉ user active mới được dùng chức năng chính.
+    function isActiveUser() {
+      return isSignedIn()
+        && exists(/databases/$(database)/documents/users/$(request.auth.uid))
+        && currentUserDoc().data.status == 'active';
+    }
+
+    // Người 5 thực hiện: kiểm tra quyền ADMIN từ field role trong collection users.
+    function isAdmin() {
+      return isSignedIn()
+        && exists(/databases/$(database)/documents/users/$(request.auth.uid))
+        && currentUserDoc().data.role == 'ADMIN';
+    }
+
+    // Người 5 thực hiện: kiểm tra người dùng có phải chủ hồ sơ hay không.
+    function isSelf(userId) {
+      return isSignedIn() && request.auth.uid == userId;
+    }
+
+    // Người 5 thực hiện: kiểm tra người dùng có liên quan đến quan hệ bạn bè/lời mời hay không.
+    function isRelationParticipant(userId, friendUserId) {
+      return isSignedIn()
+        && (request.auth.uid == userId || request.auth.uid == friendUserId || isAdmin());
+    }
+
+
+
+    // Kiểm tra user hiện tại có nằm trong phòng chat hay không.
+    function isChatRoomMember(roomId) {
+      return isSignedIn()
+        && exists(/databases/$(database)/documents/chat_rooms/$(roomId))
+        && request.auth.uid in get(/databases/$(database)/documents/chat_rooms/$(roomId)).data.memberIds;
+    }
+
+    // Người 5 thực hiện: kiểm tra người dùng có phải người gửi moment hay không.
+    function isMomentSender(momentId) {
+      return isSignedIn()
+        && exists(/databases/$(database)/documents/moments/$(momentId))
+        && get(/databases/$(database)/documents/moments/$(momentId)).data.senderId == request.auth.uid;
+    }
+
+    match /users/{userId} {
+      allow get: if isActiveUser() || isSelf(userId) || isAdmin();
+      allow list: if isActiveUser() || isAdmin();
+
+      allow create: if isSelf(userId)
+        && request.resource.data.userId == request.auth.uid
+        && request.resource.data.role == 'USER'
+        && request.resource.data.status == 'active';
+
+      allow update: if isAdmin()
+        || (isSelf(userId)
+          && !request.resource.data.diff(resource.data).affectedKeys().hasAny(['role', 'status']));
+
+      allow delete: if isAdmin();
+    }
+
+    match /friend_requests/{requestId} {
+      allow read: if isActiveUser()
+        && isRelationParticipant(resource.data.senderId, resource.data.receiverId);
+
+      allow create: if isActiveUser()
+        && request.resource.data.senderId == request.auth.uid
+        && request.resource.data.receiverId is string
+        && request.resource.data.status == 'pending';
+
+      allow update: if isActiveUser()
+        && isRelationParticipant(resource.data.senderId, resource.data.receiverId);
+
+      allow delete: if isActiveUser()
+        && isRelationParticipant(resource.data.senderId, resource.data.receiverId);
+    }
+
+    match /friends/{friendId} {
+      allow read: if isActiveUser()
+        && isRelationParticipant(resource.data.userId, resource.data.friendUserId);
+
+      allow create: if isActiveUser()
+        && isRelationParticipant(request.resource.data.userId, request.resource.data.friendUserId);
+
+      allow delete: if isActiveUser()
+        && isRelationParticipant(resource.data.userId, resource.data.friendUserId);
+
+      allow update: if false;
+    }
+
+    match /moments/{momentId} {
+      allow read: if isAdmin()
+        || (isActiveUser() && resource.data.status == 'active');
+
+      allow create: if isActiveUser()
+        && request.resource.data.senderId == request.auth.uid
+        && request.resource.data.imageUrl is string
+        && request.resource.data.status == 'active';
+
+      allow update: if isAdmin()
+        || (isActiveUser()
+          && resource.data.senderId == request.auth.uid
+          && !request.resource.data.diff(resource.data).affectedKeys().hasAny(['senderId']));
+
+      allow delete: if isAdmin();
+    }
+
+    match /moment_receivers/{receiverRecordId} {
+      allow read: if isAdmin()
+        || (isActiveUser()
+          && (resource.data.receiverId == request.auth.uid || isMomentSender(resource.data.momentId)));
+
+      allow create: if isActiveUser()
+        && isMomentSender(request.resource.data.momentId)
+        && request.resource.data.receiverId is string;
+
+      allow update: if isAdmin()
+        || (isActiveUser() && resource.data.receiverId == request.auth.uid);
+
+      allow delete: if isAdmin();
+    }
+
+    match /reactions/{reactionId} {
+      allow read: if isActiveUser() || isAdmin();
+
+      allow create: if isActiveUser()
+        && request.resource.data.userId == request.auth.uid
+        && request.resource.data.momentId is string
+        && request.resource.data.emoji is string;
+
+      allow update: if isAdmin()
+        || (isActiveUser() && resource.data.userId == request.auth.uid);
+
+      allow delete: if isAdmin()
+        || (isActiveUser() && resource.data.userId == request.auth.uid);
+    }
+
+    match /notifications/{notificationId} {
+      allow read: if isAdmin()
+        || (isActiveUser() && resource.data.userId == request.auth.uid);
+
+      // Người 5 thực hiện: client hiện tại tạo in-app notification khi gửi ảnh/lời mời/reaction.
+      // Với production thật nên chuyển phần create notification sang Cloud Functions.
+      allow create: if isActiveUser()
+        && request.resource.data.userId is string
+        && request.resource.data.type is string
+        && request.resource.data.title is string
+        && request.resource.data.message is string;
+
+      allow update: if isAdmin()
+        || (isActiveUser() && resource.data.userId == request.auth.uid);
+
+      allow delete: if isAdmin()
+        || (isActiveUser() && resource.data.userId == request.auth.uid);
+    }
+
+
+
+    match /chat_rooms/{roomId} {
+      allow read: if isAdmin()
+        || (isActiveUser() && request.auth.uid in resource.data.memberIds);
+
+      allow create: if isActiveUser()
+        && request.auth.uid in request.resource.data.memberIds
+        && request.resource.data.memberIds.size() == 2;
+
+      allow update: if isAdmin()
+        || (isActiveUser()
+          && request.auth.uid in resource.data.memberIds
+          && request.auth.uid in request.resource.data.memberIds);
+
+      allow delete: if isAdmin();
+
+      match /messages/{messageId} {
+        allow read: if isAdmin()
+          || (isActiveUser() && isChatRoomMember(roomId));
+
+        allow create: if isActiveUser()
+          && isChatRoomMember(roomId)
+          && request.resource.data.senderId == request.auth.uid
+          && request.resource.data.receiverId is string
+          && request.resource.data.text is string;
+
+        allow update: if isAdmin()
+          || (isActiveUser()
+            && isChatRoomMember(roomId)
+            && resource.data.receiverId == request.auth.uid);
+
+        allow delete: if isAdmin();
+      }
+    }
+
+    match /reports/{reportId} {
+      allow read: if isAdmin()
+        || (isActiveUser() && resource.data.reporterId == request.auth.uid);
+
+      allow create: if isActiveUser()
+        && request.resource.data.reporterId == request.auth.uid
+        && request.resource.data.momentId is string
+        && request.resource.data.reason is string
+        && request.resource.data.status == 'pending';
+
+      allow update: if isAdmin();
+      allow delete: if isAdmin();
+    }
+
+    match /{document=**} {
+      allow read, write: if false;
+    }
+  }
+}
