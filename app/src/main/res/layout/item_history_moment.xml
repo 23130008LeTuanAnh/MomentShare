@@ -2,28 +2,16 @@
 <androidx.cardview.widget.CardView
     xmlns:android="http://schemas.android.com/apk/res/android"
     xmlns:app="http://schemas.android.com/apk/res-auto"
-    xmlns:tools="http://schemas.android.com/tools"
     android:layout_width="match_parent"
     android:layout_height="wrap_content"
     android:layout_margin="4dp"
     app:cardCornerRadius="12dp"
     app:cardElevation="2dp">
 
-    <LinearLayout
+    <ImageView
+        android:id="@+id/imgHistoryMoment"
         android:layout_width="match_parent"
-        android:layout_height="wrap_content"
-        android:orientation="vertical">
-
-        <ImageView
-            android:id="@+id/imgHistoryMoment"
-            android:layout_width="match_parent"
-            android:layout_height="150dp"
-            android:layout_weight="1"
-            android:adjustViewBounds="true"
-            android:scaleType="centerCrop"
-            tools:layout_height="120dp"
-            tools:src="@tools:sample/backgrounds/scenic" />
-
-    </LinearLayout>
+        android:layout_height="150dp"
+        android:scaleType="centerCrop" />
 
 </androidx.cardview.widget.CardView>
