@@ -1,5 +1,6 @@
 package com.example.momentshare.activity;
 
+import android.content.Intent;
 import android.os.Bundle;
 import android.view.View;
 import android.widget.ArrayAdapter;
@@ -15,12 +16,17 @@ import com.example.momentshare.R;
 import com.example.momentshare.model.NotificationModel;
 import com.example.momentshare.repository.AuthManager;
 import com.example.momentshare.repository.NotificationRepository;
+import com.example.momentshare.util.Constants;
 
 import java.util.ArrayList;
 import java.util.List;
 
 /**
  * NotificationActivity hiển thị danh sách thông báo trong app cho người dùng hiện tại.
+ *
+ * Đã chỉnh:
+ * - Bấm vào thông báo Lời mời kết bạn sẽ mở đúng FriendRequestActivity.
+ * - Các thông báo khác chỉ đánh dấu đã đọc, không điều hướng sai sang màn hình ảnh.
  */
 public class NotificationActivity extends AppCompatActivity {
 
@@ -48,6 +54,12 @@ public class NotificationActivity extends AppCompatActivity {
         loadNotifications();
     }
 
+    @Override
+    protected void onResume() {
+        super.onResume();
+        loadNotifications();
+    }
+
     private void initViews() {
         listNotifications = findViewById(R.id.listNotifications);
         txtEmptyNotifications = findViewById(R.id.txtEmptyNotifications);
@@ -58,7 +70,7 @@ public class NotificationActivity extends AppCompatActivity {
 
         adapter = new ArrayAdapter<>(this, android.R.layout.simple_list_item_1, new ArrayList<>());
         listNotifications.setAdapter(adapter);
-        listNotifications.setOnItemClickListener((parent, view, position, id) -> markOneAsRead(notifications.get(position)));
+        listNotifications.setOnItemClickListener((parent, view, position, id) -> handleNotificationClick(notifications.get(position)));
         btnMarkAllRead.setOnClickListener(v -> markAllAsRead());
     }
 
@@ -100,8 +112,31 @@ public class NotificationActivity extends AppCompatActivity {
         txtEmptyNotifications.setVisibility(notifications.isEmpty() ? View.VISIBLE : View.GONE);
     }
 
-    private void markOneAsRead(NotificationModel notification) {
+    /**
+     * Xử lý khi bấm vào từng thông báo.
+     *
+     * Lời mời kết bạn phải mở FriendRequestActivity để user chấp nhận/từ chối.
+     * Reaction hiện chưa lưu momentId trong NotificationModel nên không mở detail để tránh mở sai ảnh.
+     */
+    private void handleNotificationClick(NotificationModel notification) {
+        markOneAsRead(notification, () -> {
+            if (Constants.NOTIFICATION_TYPE_FRIEND_REQUEST.equals(notification.getType())) {
+                Intent intent = new Intent(NotificationActivity.this, FriendRequestActivity.class);
+                startActivity(intent);
+                return;
+            }
+
+            Toast.makeText(NotificationActivity.this, "Đã đọc thông báo", Toast.LENGTH_SHORT).show();
+        });
+    }
+
+    private void markOneAsRead(NotificationModel notification, Runnable afterMarked) {
+        if (notification == null || notification.getNotificationId() == null) {
+            return;
+        }
+
         if (notification.isRead()) {
+            afterMarked.run();
             return;
         }
 
@@ -110,7 +145,9 @@ public class NotificationActivity extends AppCompatActivity {
             @Override
             public void onSuccess() {
                 setLoading(false);
-                loadNotifications();
+                notification.setRead(true);
+                renderNotifications();
+                afterMarked.run();
             }
 
             @Override
