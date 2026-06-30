@@ -16,7 +16,6 @@ import com.google.firebase.Timestamp;
 import com.google.firebase.firestore.DocumentReference;
 import com.google.firebase.firestore.DocumentSnapshot;
 import com.google.firebase.firestore.FirebaseFirestore;
-import com.google.firebase.firestore.Query;
 import com.google.firebase.firestore.QueryDocumentSnapshot;
 import com.google.firebase.firestore.WriteBatch;
 
@@ -77,7 +76,7 @@ public class MomentRepository {
     private static final String FIELD_CREATED_AT = "createdAt";
     private static final String FIELD_STATUS = "status";
     private static final String STATUS_ACTIVE = "active";
-    private static final int DEFAULT_LIMIT = 30;
+    private static final int DEFAULT_LIMIT = 100;
 
     private final FirebaseFirestore db;
     private final UploadImageHelper uploadImageHelper;
@@ -348,19 +347,45 @@ public class MomentRepository {
                 .addOnFailureListener(callback::onError);
     }
 
+    /**
+     * Lấy lịch sử ảnh đã gửi.
+     *
+     * Chỉ query theo senderId rồi tự lọc status/sắp xếp ở client để tránh lỗi thiếu
+     * composite index Firestore khi demo.
+     */
     public void getSentHistory(@NonNull String currentUserId, @NonNull MomentListCallback callback) {
         db.collection(COLLECTION_MOMENTS)
                 .whereEqualTo(FIELD_SENDER_ID, currentUserId)
-                .whereEqualTo(FIELD_STATUS, STATUS_ACTIVE)
-                .orderBy(FIELD_CREATED_AT, Query.Direction.DESCENDING)
                 .limit(DEFAULT_LIMIT)
                 .get()
-                .addOnSuccessListener(snapshot -> callback.onSuccess(mapMomentList(snapshot.getDocuments())))
+                .addOnSuccessListener(snapshot -> callback.onSuccess(mapActiveMomentList(snapshot.getDocuments())))
                 .addOnFailureListener(callback::onError);
     }
 
+    /**
+     * Lấy lịch sử ảnh đã nhận.
+     *
+     * Bước 1: lấy các document moment_receivers có receiverId là user hiện tại.
+     * Bước 2: lấy chi tiết moment theo từng momentId.
+     */
     public void getReceivedHistory(@NonNull String currentUserId, @NonNull MomentListCallback callback) {
-        getHomeFeed(currentUserId, callback);
+        db.collection(COLLECTION_MOMENT_RECEIVERS)
+                .whereEqualTo(FIELD_RECEIVER_ID, currentUserId)
+                .limit(DEFAULT_LIMIT)
+                .get()
+                .addOnSuccessListener(snapshot -> {
+                    List<String> momentIds = new ArrayList<>();
+
+                    for (DocumentSnapshot document : snapshot.getDocuments()) {
+                        String momentId = document.getString(FIELD_MOMENT_ID);
+                        if (momentId != null && !momentId.trim().isEmpty() && !momentIds.contains(momentId)) {
+                            momentIds.add(momentId);
+                        }
+                    }
+
+                    loadMomentsByIds(momentIds, callback);
+                })
+                .addOnFailureListener(callback::onError);
     }
 
     /**
@@ -370,12 +395,20 @@ public class MomentRepository {
      * Chỉ đếm các moment còn trạng thái active để không tính ảnh đã bị ẩn/xóa.
      */
     public void countSentMoments(@NonNull String currentUserId, @NonNull CountCallback callback) {
-        // Người 1 thực hiện: query các moment active do user hiện tại gửi.
+        // Query theo senderId rồi lọc status ở client để tránh lỗi thiếu composite index khi demo.
         db.collection(COLLECTION_MOMENTS)
                 .whereEqualTo(FIELD_SENDER_ID, currentUserId)
-                .whereEqualTo(FIELD_STATUS, STATUS_ACTIVE)
                 .get()
-                .addOnSuccessListener(snapshot -> callback.onSuccess(snapshot.size()))
+                .addOnSuccessListener(snapshot -> {
+                    long count = 0;
+                    for (DocumentSnapshot document : snapshot.getDocuments()) {
+                        Moment moment = mapMoment(document);
+                        if (moment != null && isVisibleActiveStatus(moment.getStatus())) {
+                            count++;
+                        }
+                    }
+                    callback.onSuccess(count);
+                })
                 .addOnFailureListener(e ->
                         callback.onFailure("Không thể đếm ảnh đã gửi: " + e.getMessage()));
     }
@@ -427,7 +460,7 @@ public class MomentRepository {
                     .addOnSuccessListener(document -> {
                         if (failed[0]) return;
                         Moment moment = mapMoment(document);
-                        if (moment != null && STATUS_ACTIVE.equals(moment.getStatus())) {
+                        if (moment != null && isVisibleActiveStatus(moment.getStatus())) {
                             result.add(moment);
                         }
                         completedCount[0]++;
@@ -450,6 +483,27 @@ public class MomentRepository {
             if (moment != null) moments.add(moment);
         }
         return moments;
+    }
+
+    private List<Moment> mapActiveMomentList(List<DocumentSnapshot> documents) {
+        List<Moment> moments = new ArrayList<>();
+        for (DocumentSnapshot document : documents) {
+            Moment moment = mapMoment(document);
+            if (moment != null && isVisibleActiveStatus(moment.getStatus())) {
+                moments.add(moment);
+            }
+        }
+        return moments;
+    }
+
+    /**
+     * Với dữ liệu mới: status = active mới hiển thị.
+     * Với dữ liệu cũ chưa có status: vẫn cho hiển thị để History không bị trống khi demo.
+     */
+    private boolean isVisibleActiveStatus(String status) {
+        return status == null
+                || status.trim().isEmpty()
+                || STATUS_ACTIVE.equalsIgnoreCase(status.trim());
     }
 
     @Nullable
