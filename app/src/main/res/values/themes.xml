@@ -1,9 +1,60 @@
+<?xml version="1.0" encoding="utf-8"?>
 <resources xmlns:tools="http://schemas.android.com/tools">
-    <!-- Base application theme. -->
+
+    <!-- Theme chính của ứng dụng MomentShare. -->
     <style name="Base.Theme.MomentShare" parent="Theme.Material3.DayNight.NoActionBar">
-        <!-- Customize your light theme here. -->
-        <!-- <item name="colorPrimary">@color/my_light_primary</item> -->
+        <item name="colorPrimary">@color/ms_primary</item>
+        <item name="colorPrimaryDark">@color/ms_primary_dark</item>
+        <item name="colorSecondary">@color/ms_primary_light</item>
+        <item name="colorAccent">@color/ms_primary</item>
+
+        <item name="android:windowBackground">@color/ms_screen</item>
+        <item name="android:statusBarColor">@color/ms_screen</item>
+        <item name="android:navigationBarColor">@color/ms_surface</item>
+        <item name="android:windowLightStatusBar">true</item>
+        <item name="android:windowLightNavigationBar">true</item>
+
+        <item name="android:fontFamily">sans</item>
+        <item name="android:forceDarkAllowed">false</item>
+
+        <!-- Màu mặc định cho Material Button / TextInput / Card. -->
+        <item name="materialButtonStyle">@style/Widget.MomentShare.Button</item>
+        <item name="textInputStyle">@style/Widget.MomentShare.TextInputLayout</item>
+        <item name="materialCardViewStyle">@style/Widget.MomentShare.Card</item>
     </style>
 
     <style name="Theme.MomentShare" parent="Base.Theme.MomentShare" />
+
+    <!-- Nút Material mặc định: bo góc, màu hồng chủ đạo. -->
+    <style name="Widget.MomentShare.Button" parent="Widget.Material3.Button">
+        <item name="cornerRadius">16dp</item>
+        <item name="android:textAllCaps">false</item>
+        <item name="backgroundTint">@color/ms_primary</item>
+        <item name="android:textColor">@color/white</item>
+    </style>
+
+    <!-- Ô nhập mặc định dùng cho login/register/edit profile. -->
+    <style name="Widget.MomentShare.TextInputLayout" parent="Widget.Material3.TextInputLayout.OutlinedBox">
+        <item name="boxStrokeColor">@color/ms_primary</item>
+        <item name="hintTextColor">@color/ms_primary</item>
+        <item name="boxCornerRadiusTopStart">16dp</item>
+        <item name="boxCornerRadiusTopEnd">16dp</item>
+        <item name="boxCornerRadiusBottomStart">16dp</item>
+        <item name="boxCornerRadiusBottomEnd">16dp</item>
+    </style>
+
+    <!-- Card mặc định: nền trắng, bo góc mềm. -->
+    <style name="Widget.MomentShare.Card" parent="Widget.Material3.CardView.Elevated">
+        <item name="cardCornerRadius">22dp</item>
+        <item name="cardElevation">2dp</item>
+        <item name="strokeColor">@color/ms_stroke</item>
+        <item name="strokeWidth">1dp</item>
+    </style>
+
+    <!-- Dùng cho ShapeableImageView avatar tròn nếu cần. -->
+    <style name="ShapeAppearance.MomentShare.CircleImage">
+        <item name="cornerFamily">rounded</item>
+        <item name="cornerSize">50%</item>
+    </style>
+
 </resources>
