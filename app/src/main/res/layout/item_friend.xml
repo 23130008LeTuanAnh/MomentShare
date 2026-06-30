@@ -2,48 +2,71 @@
 <LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
     android:layout_width="match_parent"
     android:layout_height="wrap_content"
-    android:orientation="horizontal"
+    android:background="#FFFFFF"
     android:gravity="center_vertical"
-    android:padding="8dp">
+    android:orientation="horizontal"
+    android:paddingStart="8dp"
+    android:paddingTop="10dp"
+    android:paddingEnd="8dp"
+    android:paddingBottom="10dp">
 
     <ImageView
         android:id="@+id/imgFriendAvatar"
         android:layout_width="56dp"
         android:layout_height="56dp"
-        android:src="@mipmap/ic_launcher"
-        android:scaleType="centerCrop" />
+        android:contentDescription="Avatar bạn bè"
+        android:scaleType="centerCrop"
+        android:src="@mipmap/ic_launcher" />
 
     <LinearLayout
         android:layout_width="0dp"
         android:layout_height="wrap_content"
+        android:layout_marginStart="12dp"
         android:layout_weight="1"
-        android:orientation="vertical"
-        android:layout_marginStart="12dp">
+        android:orientation="vertical">
 
         <TextView
             android:id="@+id/txtFriendName"
-            android:layout_width="wrap_content"
+            android:layout_width="match_parent"
             android:layout_height="wrap_content"
+            android:ellipsize="end"
+            android:maxLines="1"
             android:text="Full Name"
+            android:textColor="#222222"
             android:textSize="16sp"
-            android:textStyle="bold"
-            android:textColor="#000000" />
+            android:textStyle="bold" />
 
         <TextView
             android:id="@+id/txtFriendUsername"
-            android:layout_width="wrap_content"
+            android:layout_width="match_parent"
             android:layout_height="wrap_content"
-            android:text="username"
-            android:textSize="14sp"
-            android:textColor="#777777" />
+            android:layout_marginTop="2dp"
+            android:ellipsize="end"
+            android:maxLines="1"
+            android:text="@username"
+            android:textColor="#7353C4"
+            android:textSize="14sp" />
+
+        <TextView
+            android:id="@+id/txtFriendEmail"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="2dp"
+            android:ellipsize="end"
+            android:maxLines="1"
+            android:text="email@example.com"
+            android:textColor="#777777"
+            android:textSize="13sp" />
+
     </LinearLayout>
 
     <Button
         android:id="@+id/btnFriendAction"
+        style="?android:attr/buttonStyleSmall"
         android:layout_width="wrap_content"
         android:layout_height="wrap_content"
+        android:minWidth="88dp"
         android:text="Kết bạn"
-        android:textAllCaps="false"
-        style="?android:attr/buttonStyleSmall" />
+        android:textAllCaps="false" />
 
 </LinearLayout>
