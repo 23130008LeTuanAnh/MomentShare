@@ -11,19 +11,15 @@ import android.widget.Toast;
 import androidx.appcompat.app.AppCompatActivity;
 
 import com.example.momentshare.R;
+import com.example.momentshare.helper.AdminAccessHelper;
 import com.example.momentshare.helper.TestDataSeeder;
 import com.example.momentshare.model.StatisticsModel;
 import com.example.momentshare.model.User;
 import com.example.momentshare.repository.AdminRepository;
-import com.example.momentshare.repository.AuthManager;
-import com.example.momentshare.repository.UserRepository;
-import com.example.momentshare.util.Constants;
 
 /**
- * AdminDashboardActivity là màn hình tổng quan cho quản trị viên.
- *
- * Đã chỉnh:
- * - Nút Quản lý báo cáo hiển thị số báo cáo đang chờ.
+ * AdminDashboardActivity là trang tổng quan quản trị.
+ * Chỉ tài khoản ADMIN active mới được truy cập.
  */
 public class AdminDashboardActivity extends AppCompatActivity {
 
@@ -40,32 +36,31 @@ public class AdminDashboardActivity extends AppCompatActivity {
     private Button btnSeedDemo;
     private Button btnBackProfile;
 
-    private AuthManager authManager;
-    private UserRepository userRepository;
+    private AdminAccessHelper adminAccessHelper;
     private AdminRepository adminRepository;
     private TestDataSeeder testDataSeeder;
 
-    private String currentUserId;
+    private String currentAdminId;
+    private boolean adminVerified = false;
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
         setContentView(R.layout.activity_admin_dashboard);
 
-        authManager = new AuthManager();
-        userRepository = new UserRepository();
+        adminAccessHelper = new AdminAccessHelper();
         adminRepository = new AdminRepository();
         testDataSeeder = new TestDataSeeder();
 
         initViews();
         setupEvents();
-        checkAdminPermission();
+        verifyAdminAndLoad();
     }
 
     @Override
     protected void onResume() {
         super.onResume();
-        if (currentUserId != null) {
+        if (adminVerified) {
             loadStatistics();
         }
     }
@@ -93,36 +88,15 @@ public class AdminDashboardActivity extends AppCompatActivity {
         btnBackProfile.setOnClickListener(v -> finish());
     }
 
-    private void checkAdminPermission() {
-        if (!authManager.isLoggedIn()) {
-            goToLogin();
-            return;
-        }
-
-        currentUserId = authManager.getCurrentUserId();
-        if (currentUserId == null || currentUserId.trim().isEmpty()) {
-            goToLogin();
-            return;
-        }
-
+    private void verifyAdminAndLoad() {
         setLoading(true);
-        userRepository.getUserById(currentUserId, new UserRepository.UserCallback() {
+        adminAccessHelper.requireActiveAdmin(this, new AdminAccessHelper.AdminAccessCallback() {
             @Override
-            public void onSuccess(User user) {
-                if (!Constants.ROLE_ADMIN.equals(user.getRole())) {
-                    Toast.makeText(AdminDashboardActivity.this, "Tài khoản không có quyền Admin", Toast.LENGTH_SHORT).show();
-                    finish();
-                    return;
-                }
-
-                txtAdminTitle.setText("Admin Dashboard - " + safeText(user.getFullName(), "MomentShare"));
+            public void onGranted(String adminId, User adminUser) {
+                currentAdminId = adminId;
+                adminVerified = true;
+                txtAdminTitle.setText("Admin Dashboard - " + safeText(adminUser.getFullName(), "MomentShare"));
                 loadStatistics();
-            }
-
-            @Override
-            public void onFailure(String errorMessage) {
-                Toast.makeText(AdminDashboardActivity.this, errorMessage, Toast.LENGTH_SHORT).show();
-                finish();
             }
         });
     }
@@ -150,19 +124,16 @@ public class AdminDashboardActivity extends AppCompatActivity {
         txtTotalReports.setText(String.valueOf(statistics.getTotalReports()));
         txtPendingReports.setText(String.valueOf(statistics.getPendingReports()));
         txtLockedUsers.setText(String.valueOf(statistics.getLockedUsers()));
-
-        if (statistics.getPendingReports() > 0) {
-            btnManageReports.setText("Quản lý báo cáo (" + statistics.getPendingReports() + ")");
-        } else {
-            btnManageReports.setText("Quản lý báo cáo");
-        }
     }
 
     private void seedDemoData() {
-        if (currentUserId == null) return;
+        if (currentAdminId == null || currentAdminId.trim().isEmpty()) {
+            Toast.makeText(this, "Chưa xác định tài khoản admin", Toast.LENGTH_SHORT).show();
+            return;
+        }
 
         setLoading(true);
-        testDataSeeder.seedAdminDemoData(currentUserId, new TestDataSeeder.SeedCallback() {
+        testDataSeeder.seedAdminDemoData(currentAdminId, new TestDataSeeder.SeedCallback() {
             @Override
             public void onSuccess() {
                 setLoading(false);
@@ -184,12 +155,7 @@ public class AdminDashboardActivity extends AppCompatActivity {
         btnManageReports.setEnabled(!isLoading);
         btnStatistics.setEnabled(!isLoading);
         btnSeedDemo.setEnabled(!isLoading);
-    }
-
-    private void goToLogin() {
-        Intent intent = new Intent(this, LoginActivity.class);
-        intent.setFlags(Intent.FLAG_ACTIVITY_NEW_TASK | Intent.FLAG_ACTIVITY_CLEAR_TASK);
-        startActivity(intent);
+        btnBackProfile.setEnabled(!isLoading);
     }
 
     private String safeText(String value, String fallback) {

@@ -10,12 +10,13 @@ import android.widget.Toast;
 import androidx.appcompat.app.AppCompatActivity;
 
 import com.example.momentshare.R;
+import com.example.momentshare.helper.AdminAccessHelper;
 import com.example.momentshare.model.StatisticsModel;
 import com.example.momentshare.repository.AdminRepository;
 
 /**
- * StatisticsActivity hiển thị thống kê hệ thống ở dạng đơn giản để phục vụ demo và báo cáo.
- * File này thuộc phần Người 5 - Thống kê hệ thống.
+ * StatisticsActivity hiển thị thống kê chi tiết của hệ thống.
+ * Chỉ ADMIN active mới được xem.
  */
 public class StatisticsActivity extends AppCompatActivity {
 
@@ -23,13 +24,16 @@ public class StatisticsActivity extends AppCompatActivity {
     private ProgressBar progressBar;
     private Button btnReloadStatistics;
 
+    private AdminAccessHelper adminAccessHelper;
     private AdminRepository adminRepository;
+    private boolean adminVerified = false;
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
         setContentView(R.layout.activity_statistics);
 
+        adminAccessHelper = new AdminAccessHelper();
         adminRepository = new AdminRepository();
 
         txtStatisticsContent = findViewById(R.id.txtStatisticsContent);
@@ -37,10 +41,22 @@ public class StatisticsActivity extends AppCompatActivity {
         btnReloadStatistics = findViewById(R.id.btnReloadStatistics);
 
         btnReloadStatistics.setOnClickListener(v -> loadStatistics());
-        loadStatistics();
+        verifyAdminAndLoad();
+    }
+
+    private void verifyAdminAndLoad() {
+        setLoading(true);
+        adminAccessHelper.requireActiveAdmin(this, (adminId, adminUser) -> {
+            adminVerified = true;
+            loadStatistics();
+        });
     }
 
     private void loadStatistics() {
+        if (!adminVerified) {
+            return;
+        }
+
         setLoading(true);
         adminRepository.loadStatistics(new AdminRepository.StatisticsCallback() {
             @Override
@@ -58,11 +74,19 @@ public class StatisticsActivity extends AppCompatActivity {
     }
 
     private String buildStatisticsText(StatisticsModel statistics) {
-        return "Tổng người dùng: " + statistics.getTotalUsers()
+        return "THỐNG KÊ NGƯỜI DÙNG"
+                + "\nTổng người dùng: " + statistics.getTotalUsers()
+                + "\nĐang hoạt động: " + statistics.getActiveUsers()
                 + "\nTài khoản bị khóa: " + statistics.getLockedUsers()
+                + "\n\nTHỐNG KÊ KHOẢNH KHẮC"
                 + "\nTổng khoảnh khắc: " + statistics.getTotalMoments()
+                + "\nĐang hiển thị: " + statistics.getActiveMoments()
+                + "\nĐã bị ẩn: " + statistics.getHiddenMoments()
+                + "\n\nTHỐNG KÊ BÁO CÁO"
                 + "\nTổng báo cáo: " + statistics.getTotalReports()
-                + "\nBáo cáo đang chờ: " + statistics.getPendingReports();
+                + "\nĐang chờ xử lý: " + statistics.getPendingReports()
+                + "\nĐã xử lý: " + statistics.getResolvedReports()
+                + "\nĐã bỏ qua: " + statistics.getIgnoredReports();
     }
 
     private void setLoading(boolean isLoading) {

@@ -1,6 +1,5 @@
 package com.example.momentshare.activity;
 
-import android.app.AlertDialog;
 import android.os.Bundle;
 import android.view.View;
 import android.widget.ArrayAdapter;
@@ -9,88 +8,70 @@ import android.widget.ProgressBar;
 import android.widget.TextView;
 import android.widget.Toast;
 
+import androidx.appcompat.app.AlertDialog;
 import androidx.appcompat.app.AppCompatActivity;
 
 import com.example.momentshare.R;
+import com.example.momentshare.helper.AdminAccessHelper;
 import com.example.momentshare.model.ReportModel;
-import com.example.momentshare.model.User;
 import com.example.momentshare.repository.AdminRepository;
-import com.example.momentshare.repository.AuthManager;
-import com.example.momentshare.repository.UserRepository;
 import com.example.momentshare.util.Constants;
 
 import java.util.ArrayList;
 import java.util.List;
 
 /**
- * ReportManagementActivity quản lý báo cáo nội dung cho Admin.
- *
- * Đã chỉnh:
- * - Dialog xử lý report dùng nút rõ ràng: Ẩn khoảnh khắc, Bỏ qua, Hủy.
- * - Tránh lỗi giao diện chỉ hiện nút Hủy mà không hiện lựa chọn xử lý.
+ * ReportManagementActivity hiển thị và xử lý báo cáo nội dung.
+ * Admin có thể ẩn khoảnh khắc hoặc bỏ qua report.
  */
 public class ReportManagementActivity extends AppCompatActivity {
 
+    private ListView listReports;
     private TextView txtEmptyReports;
     private ProgressBar progressBar;
-    private ListView listReports;
 
-    private AuthManager authManager;
-    private UserRepository userRepository;
+    private AdminAccessHelper adminAccessHelper;
     private AdminRepository adminRepository;
 
     private final List<ReportModel> reports = new ArrayList<>();
     private ArrayAdapter<String> adapter;
-    private String currentUserId;
+    private String currentAdminId;
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
         setContentView(R.layout.activity_report_management);
 
-        authManager = new AuthManager();
-        userRepository = new UserRepository();
+        adminAccessHelper = new AdminAccessHelper();
         adminRepository = new AdminRepository();
 
         initViews();
-        checkAdminPermissionAndLoadReports();
+        verifyAdminAndLoadReports();
+    }
+
+    @Override
+    protected void onResume() {
+        super.onResume();
+        if (currentAdminId != null) {
+            loadReports();
+        }
     }
 
     private void initViews() {
+        listReports = findViewById(R.id.listReports);
         txtEmptyReports = findViewById(R.id.txtEmptyReports);
         progressBar = findViewById(R.id.progressBar);
-        listReports = findViewById(R.id.listReports);
 
         adapter = new ArrayAdapter<>(this, android.R.layout.simple_list_item_1, new ArrayList<>());
         listReports.setAdapter(adapter);
         listReports.setOnItemClickListener((parent, view, position, id) -> showReportActionDialog(reports.get(position)));
     }
 
-    private void checkAdminPermissionAndLoadReports() {
-        currentUserId = authManager.getCurrentUserId();
-        if (currentUserId == null || currentUserId.trim().isEmpty()) {
-            finish();
-            return;
-        }
-
+    private void verifyAdminAndLoadReports() {
         setLoading(true);
-        userRepository.getUserById(currentUserId, new UserRepository.UserCallback() {
-            @Override
-            public void onSuccess(User user) {
-                if (!Constants.ROLE_ADMIN.equals(user.getRole())) {
-                    Toast.makeText(ReportManagementActivity.this, "Không có quyền Admin", Toast.LENGTH_SHORT).show();
-                    finish();
-                    return;
-                }
-                loadReports();
-            }
-
-            @Override
-            public void onFailure(String errorMessage) {
-                setLoading(false);
-                Toast.makeText(ReportManagementActivity.this, errorMessage, Toast.LENGTH_SHORT).show();
-                finish();
-            }
+        adminAccessHelper.requireActiveAdmin(this, (adminId, adminUser) -> {
+            currentAdminId = adminId;
+            loadReports();
         });
     }
 
@@ -115,52 +96,84 @@ public class ReportManagementActivity extends AppCompatActivity {
 
     private void renderReports() {
         adapter.clear();
+
         for (ReportModel report : reports) {
-            adapter.add("Lý do: " + safeText(report.getReason(), "Không có")
-                    + "\nMoment: " + safeText(report.getMomentId(), "Không rõ")
-                    + " - " + safeText(report.getStatus(), Constants.REPORT_STATUS_PENDING));
+            adapter.add(buildReportRowText(report));
         }
+
         adapter.notifyDataSetChanged();
         txtEmptyReports.setVisibility(reports.isEmpty() ? View.VISIBLE : View.GONE);
     }
 
+    private String buildReportRowText(ReportModel report) {
+        String status = safeText(report.getStatus(), Constants.REPORT_STATUS_PENDING);
+        String reason = safeText(report.getReason(), "Không có lý do");
+        String momentId = safeText(report.getMomentId(), "Không rõ moment");
+        String reporterId = safeText(report.getReporterId(), "Không rõ người báo cáo");
+
+        return "Trạng thái: " + status
+                + "\nLý do: " + reason
+                + "\nMoment: " + momentId
+                + "\nNgười báo cáo: " + reporterId;
+    }
+
     private void showReportActionDialog(ReportModel report) {
+        if (report == null || report.getReportId() == null || report.getReportId().trim().isEmpty()) {
+            Toast.makeText(this, "Không xác định được báo cáo", Toast.LENGTH_SHORT).show();
+            return;
+        }
+
         if (!Constants.REPORT_STATUS_PENDING.equals(report.getStatus())) {
             Toast.makeText(this, "Báo cáo này đã được xử lý", Toast.LENGTH_SHORT).show();
             return;
         }
 
+        String[] actions = {
+                "Ẩn khoảnh khắc",
+                "Bỏ qua báo cáo"
+        };
+
         new AlertDialog.Builder(this)
                 .setTitle("Xử lý báo cáo")
                 .setMessage("Moment ID: " + safeText(report.getMomentId(), "Không rõ")
                         + "\nLý do: " + safeText(report.getReason(), "Không có"))
-                .setPositiveButton("Ẩn khoảnh khắc", (dialog, which) -> hideMomentAndResolveReport(report))
-                .setNeutralButton("Bỏ qua", (dialog, which) -> ignoreReport(report))
+                .setItems(actions, (dialog, which) -> {
+                    if (which == 0) {
+                        hideMomentAndResolveReport(report);
+                    } else {
+                        ignoreReport(report);
+                    }
+                })
                 .setNegativeButton("Hủy", null)
                 .show();
     }
 
     private void hideMomentAndResolveReport(ReportModel report) {
         setLoading(true);
-        adminRepository.resolveReportAndHideMoment(report.getReportId(), report.getMomentId(), currentUserId, new AdminRepository.ActionCallback() {
-            @Override
-            public void onSuccess() {
-                setLoading(false);
-                Toast.makeText(ReportManagementActivity.this, "Đã xử lý báo cáo", Toast.LENGTH_SHORT).show();
-                loadReports();
-            }
+        adminRepository.resolveReportAndHideMoment(
+                report.getReportId(),
+                safeText(report.getMomentId(), ""),
+                currentAdminId,
+                new AdminRepository.ActionCallback() {
+                    @Override
+                    public void onSuccess() {
+                        setLoading(false);
+                        Toast.makeText(ReportManagementActivity.this, "Đã ẩn khoảnh khắc và xử lý báo cáo", Toast.LENGTH_SHORT).show();
+                        loadReports();
+                    }
 
-            @Override
-            public void onFailure(String errorMessage) {
-                setLoading(false);
-                Toast.makeText(ReportManagementActivity.this, errorMessage, Toast.LENGTH_SHORT).show();
-            }
-        });
+                    @Override
+                    public void onFailure(String errorMessage) {
+                        setLoading(false);
+                        Toast.makeText(ReportManagementActivity.this, errorMessage, Toast.LENGTH_SHORT).show();
+                    }
+                }
+        );
     }
 
     private void ignoreReport(ReportModel report) {
         setLoading(true);
-        adminRepository.ignoreReport(report.getReportId(), currentUserId, new AdminRepository.ActionCallback() {
+        adminRepository.ignoreReport(report.getReportId(), currentAdminId, new AdminRepository.ActionCallback() {
             @Override
             public void onSuccess() {
                 setLoading(false);

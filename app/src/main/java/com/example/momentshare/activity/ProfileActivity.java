@@ -2,6 +2,7 @@ package com.example.momentshare.activity;
 
 import android.content.Intent;
 import android.os.Bundle;
+import android.util.Log;
 import android.view.View;
 import android.widget.Button;
 import android.widget.ImageView;
@@ -19,20 +20,30 @@ import com.example.momentshare.repository.FriendRepository;
 import com.example.momentshare.repository.MomentRepository;
 import com.example.momentshare.repository.NotificationRepository;
 import com.example.momentshare.repository.UserRepository;
-import com.example.momentshare.util.Constants;
 import com.example.momentshare.util.ValidationUtils;
+import com.google.firebase.firestore.DocumentSnapshot;
+import com.google.firebase.firestore.FirebaseFirestore;
 
 import java.util.List;
 
 /**
  * ProfileActivity hiển thị hồ sơ cá nhân.
  *
- * Đã chỉnh:
- * - Hiển thị số thông báo chưa đọc trên nút Thông báo.
- * - Hiển thị số lời mời kết bạn đang chờ trên nút Lời mời kết bạn.
- * - Tự cập nhật lại badge trong onResume().
+ * Đã chỉnh phần phân quyền Admin:
+ * - Đọc trực tiếp role/status từ Firestore users/{uid}.
+ * - Không phụ thuộc vào User.getRole()/getStatus() để tránh lỗi model không map field.
+ * - User thường không thấy Admin Dashboard.
+ * - Admin active sẽ thấy badge ADMIN và nút Admin Dashboard.
  */
 public class ProfileActivity extends AppCompatActivity {
+
+    private static final String TAG = "ProfileActivity";
+
+    /**
+     * Bật true để test xem app đọc được role/status gì từ Firestore.
+     * Sau khi test xong có thể đổi thành false để không hiện Toast debug nữa.
+     */
+    private static final boolean DEBUG_ADMIN_ROLE = true;
 
     private ImageView imgAvatar;
 
@@ -40,6 +51,8 @@ public class ProfileActivity extends AppCompatActivity {
     private TextView txtUsername;
     private TextView txtEmail;
     private TextView txtBio;
+    private TextView txtRoleBadge;
+
     private TextView txtFriendCount;
     private TextView txtSentCount;
     private TextView txtReceivedCount;
@@ -57,6 +70,9 @@ public class ProfileActivity extends AppCompatActivity {
     private MomentRepository momentRepository;
     private NotificationRepository notificationRepository;
     private FriendRepository friendRepository;
+    private FirebaseFirestore db;
+
+    private String currentUserId = "";
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -68,10 +84,12 @@ public class ProfileActivity extends AppCompatActivity {
         momentRepository = new MomentRepository(this);
         notificationRepository = new NotificationRepository();
         friendRepository = new FriendRepository();
+        db = FirebaseFirestore.getInstance();
 
         initViews();
         setupEvents();
 
+        // Đăng ký FCM token cho thiết bị hiện tại.
         new FcmTokenManager().registerCurrentUserDevice(this);
     }
 
@@ -88,6 +106,8 @@ public class ProfileActivity extends AppCompatActivity {
         txtUsername = findViewById(R.id.txtUsername);
         txtEmail = findViewById(R.id.txtEmail);
         txtBio = findViewById(R.id.txtBio);
+        txtRoleBadge = findViewById(R.id.txtRoleBadge);
+
         txtFriendCount = findViewById(R.id.txtFriendCount);
         txtSentCount = findViewById(R.id.txtSentCount);
         txtReceivedCount = findViewById(R.id.txtReceivedCount);
@@ -99,15 +119,43 @@ public class ProfileActivity extends AppCompatActivity {
         btnFriendRequests = findViewById(R.id.btnFriendRequests);
         btnAdminDashboard = findViewById(R.id.btnAdminDashboard);
         btnLogout = findViewById(R.id.btnLogout);
+
+        // Mặc định luôn ẩn Admin UI.
+        // Chỉ hiện sau khi Firestore xác nhận role = ADMIN.
+        hideAdminUi();
     }
 
     private void setupEvents() {
-        btnEditProfile.setOnClickListener(v -> startActivity(new Intent(ProfileActivity.this, EditProfileActivity.class)));
-        btnHomeFeed.setOnClickListener(v -> startActivity(new Intent(ProfileActivity.this, HomeFeedActivity.class)));
-        btnNotification.setOnClickListener(v -> startActivity(new Intent(ProfileActivity.this, NotificationActivity.class)));
-        btnAdminDashboard.setOnClickListener(v -> startActivity(new Intent(ProfileActivity.this, AdminDashboardActivity.class)));
-        btnFriendList.setOnClickListener(v -> startActivity(new Intent(ProfileActivity.this, FriendListActivity.class)));
-        btnFriendRequests.setOnClickListener(v -> startActivity(new Intent(ProfileActivity.this, FriendRequestActivity.class)));
+        btnEditProfile.setOnClickListener(v -> {
+            Intent intent = new Intent(ProfileActivity.this, EditProfileActivity.class);
+            startActivity(intent);
+        });
+
+        btnHomeFeed.setOnClickListener(v -> {
+            Intent intent = new Intent(ProfileActivity.this, HomeFeedActivity.class);
+            startActivity(intent);
+        });
+
+        btnNotification.setOnClickListener(v -> {
+            Intent intent = new Intent(ProfileActivity.this, NotificationActivity.class);
+            startActivity(intent);
+        });
+
+        btnFriendList.setOnClickListener(v -> {
+            Intent intent = new Intent(ProfileActivity.this, FriendListActivity.class);
+            startActivity(intent);
+        });
+
+        btnFriendRequests.setOnClickListener(v -> {
+            Intent intent = new Intent(ProfileActivity.this, FriendRequestActivity.class);
+            startActivity(intent);
+        });
+
+        btnAdminDashboard.setOnClickListener(v -> {
+            Intent intent = new Intent(ProfileActivity.this, AdminDashboardActivity.class);
+            startActivity(intent);
+        });
+
         btnLogout.setOnClickListener(v -> handleLogout());
     }
 
@@ -117,7 +165,8 @@ public class ProfileActivity extends AppCompatActivity {
             return;
         }
 
-        String currentUserId = authManager.getCurrentUserId();
+        currentUserId = authManager.getCurrentUserId();
+
         if (ValidationUtils.isEmpty(currentUserId)) {
             Toast.makeText(this, "Không thể xác định tài khoản hiện tại", Toast.LENGTH_SHORT).show();
             navigateToLogin();
@@ -125,12 +174,21 @@ public class ProfileActivity extends AppCompatActivity {
         }
 
         showLoadingText();
+
+        // Gọi ngay sau khi có UID.
+        // Nếu là ADMIN thì hàm này sẽ bật lại Admin Dashboard sau khi showLoadingText đã ẩn nó.
+        applyAdminVisibilityFromFirestore(currentUserId);
+
         loadBadgeCounts(currentUserId);
+        loadProfileStatistics(currentUserId);
 
         userRepository.getUserById(currentUserId, new UserRepository.UserCallback() {
             @Override
             public void onSuccess(User user) {
                 displayUserProfile(user);
+
+                // Gọi lại lần nữa sau khi load profile xong để chắc chắn nút Admin không bị ẩn lại.
+                applyAdminVisibilityFromFirestore(currentUserId);
             }
 
             @Override
@@ -143,6 +201,11 @@ public class ProfileActivity extends AppCompatActivity {
     }
 
     private void displayUserProfile(User user) {
+        if (user == null) {
+            showLoadingText();
+            return;
+        }
+
         String fullName = user.getFullName();
         String username = user.getUsername();
         String email = user.getEmail();
@@ -164,9 +227,114 @@ public class ProfileActivity extends AppCompatActivity {
         } else {
             imgAvatar.setImageResource(R.mipmap.ic_launcher);
         }
+    }
 
-        btnAdminDashboard.setVisibility(Constants.ROLE_ADMIN.equals(user.getRole()) ? View.VISIBLE : View.GONE);
-        loadProfileStatistics(user.getUserId());
+    /**
+     * Đọc trực tiếp role/status từ Firestore để phân biệt ADMIN và USER.
+     *
+     * Firestore cần có:
+     * users/{uid}
+     * role: "ADMIN" hoặc "USER"
+     * status: "active" hoặc "locked"
+     */
+    private void applyAdminVisibilityFromFirestore(String userId) {
+        if (ValidationUtils.isEmpty(userId)) {
+            Log.d(TAG, "userId rỗng, ẩn Admin UI");
+            hideAdminUi();
+            return;
+        }
+
+        db.collection("users")
+                .document(userId)
+                .get()
+                .addOnSuccessListener(documentSnapshot -> {
+                    if (!documentSnapshot.exists()) {
+                        Log.d(TAG, "Không tìm thấy document users/" + userId);
+                        hideAdminUi();
+
+                        if (DEBUG_ADMIN_ROLE) {
+                            Toast.makeText(
+                                    ProfileActivity.this,
+                                    "Không tìm thấy users/" + userId,
+                                    Toast.LENGTH_SHORT
+                            ).show();
+                        }
+                        return;
+                    }
+
+                    String role = getStringField(documentSnapshot, "role");
+                    String status = getStringField(documentSnapshot, "status");
+
+                    String normalizedRole = role.trim();
+                    String normalizedStatus = status.trim();
+
+                    Log.d(TAG, "Current userId = " + userId);
+                    Log.d(TAG, "Firestore role = " + normalizedRole);
+                    Log.d(TAG, "Firestore status = " + normalizedStatus);
+
+                    if (DEBUG_ADMIN_ROLE) {
+                        Toast.makeText(
+                                ProfileActivity.this,
+                                "role=" + normalizedRole + ", status=" + normalizedStatus,
+                                Toast.LENGTH_SHORT
+                        ).show();
+                    }
+
+                    boolean isAdmin = "ADMIN".equalsIgnoreCase(normalizedRole);
+
+                    // Nếu status chưa có thì vẫn cho ADMIN hiện để dễ demo.
+                    // Nếu status = locked thì không hiện.
+                    boolean isActive = normalizedStatus.isEmpty()
+                            || "active".equalsIgnoreCase(normalizedStatus);
+
+                    if (isAdmin && isActive) {
+                        showAdminUi();
+                    } else {
+                        hideAdminUi();
+                    }
+                })
+                .addOnFailureListener(e -> {
+                    Log.e(TAG, "Lỗi đọc role/status từ Firestore", e);
+                    hideAdminUi();
+
+                    if (DEBUG_ADMIN_ROLE) {
+                        Toast.makeText(
+                                ProfileActivity.this,
+                                "Lỗi đọc role/status: " + e.getMessage(),
+                                Toast.LENGTH_SHORT
+                        ).show();
+                    }
+                });
+    }
+
+    private String getStringField(DocumentSnapshot documentSnapshot, String fieldName) {
+        String value = documentSnapshot.getString(fieldName);
+        return value == null ? "" : value;
+    }
+
+    private void showAdminUi() {
+        if (btnAdminDashboard != null) {
+            btnAdminDashboard.setVisibility(View.VISIBLE);
+        }
+
+        if (txtRoleBadge != null) {
+            txtRoleBadge.setText("ADMIN");
+            txtRoleBadge.setVisibility(View.VISIBLE);
+        }
+
+        Log.d(TAG, "Đã hiện Admin Dashboard");
+    }
+
+    private void hideAdminUi() {
+        if (btnAdminDashboard != null) {
+            btnAdminDashboard.setVisibility(View.GONE);
+        }
+
+        if (txtRoleBadge != null) {
+            txtRoleBadge.setVisibility(View.GONE);
+        }
+
+        Log.d(TAG, "Đã ẩn Admin Dashboard");
     }
 
     private void loadBadgeCounts(String userId) {
@@ -176,7 +344,11 @@ public class ProfileActivity extends AppCompatActivity {
         notificationRepository.countUnreadNotifications(userId, new NotificationRepository.CountCallback() {
             @Override
             public void onSuccess(int count) {
-                btnNotification.setText(count > 0 ? "Thông báo (" + count + ")" : "Thông báo");
+                if (count > 0) {
+                    btnNotification.setText("Thông báo (" + count + ")");
+                } else {
+                    btnNotification.setText("Thông báo");
+                }
             }
 
             @Override
@@ -188,7 +360,11 @@ public class ProfileActivity extends AppCompatActivity {
         friendRepository.countPendingRequests(userId, new FriendRepository.CountCallback() {
             @Override
             public void onSuccess(int count) {
-                btnFriendRequests.setText(count > 0 ? "Lời mời kết bạn (" + count + ")" : "Lời mời kết bạn");
+                if (count > 0) {
+                    btnFriendRequests.setText("Lời mời kết bạn (" + count + ")");
+                } else {
+                    btnFriendRequests.setText("Lời mời kết bạn");
+                }
             }
 
             @Override
@@ -245,14 +421,20 @@ public class ProfileActivity extends AppCompatActivity {
 
     private void showLoadingText() {
         imgAvatar.setImageResource(R.mipmap.ic_launcher);
+
         txtFullName.setText("Đang tải hồ sơ...");
         txtUsername.setText("@...");
         txtEmail.setText("...");
         txtBio.setText("...");
+
         txtFriendCount.setText("0 bạn bè");
         txtSentCount.setText("0 ảnh đã gửi");
         txtReceivedCount.setText("0 ảnh đã nhận");
-        btnAdminDashboard.setVisibility(View.GONE);
+
+        btnNotification.setText("Thông báo");
+        btnFriendRequests.setText("Lời mời kết bạn");
+
+        hideAdminUi();
     }
 
     private void handleLogout() {
@@ -265,5 +447,6 @@ public class ProfileActivity extends AppCompatActivity {
         Intent intent = new Intent(ProfileActivity.this, LoginActivity.class);
         intent.setFlags(Intent.FLAG_ACTIVITY_NEW_TASK | Intent.FLAG_ACTIVITY_CLEAR_TASK);
         startActivity(intent);
+        finish();
     }
 }
