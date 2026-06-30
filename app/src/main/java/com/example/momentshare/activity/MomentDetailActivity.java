@@ -104,6 +104,7 @@ public class MomentDetailActivity extends AppCompatActivity {
 
         if (currentMomentId != null && !currentMomentId.isEmpty()) {
             loadReactions();
+            loadMyReaction();
         }
 
         setupReportButton();
@@ -309,6 +310,26 @@ public class MomentDetailActivity extends AppCompatActivity {
         db.collection("notifications")
                 .document(notificationId)
                 .set(notification);
+    }
+
+    private void loadMyReaction() {
+        reactionRepository.getUserReaction(currentMomentId, currentUserId, new ReactionRepository.SaveUserReactionCallback() {
+            @Override
+            public void onSuccess(String emoji) {
+                selectedReaction = emoji == null ? "" : emoji;
+
+                if (selectedReaction.isEmpty()) {
+                    txtSelectedReaction.setText("Your reaction: none");
+                } else {
+                    txtSelectedReaction.setText("Your reaction: " + selectedReaction);
+                }
+            }
+
+            @Override
+            public void onError(Exception e) {
+                txtSelectedReaction.setText("Your reaction: none");
+            }
+        });
     }
 
     private String formatTime(long timeMillis) {

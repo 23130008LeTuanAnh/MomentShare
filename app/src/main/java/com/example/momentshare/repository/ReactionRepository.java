@@ -24,7 +24,14 @@ public class ReactionRepository {
         void onSuccess();
         void onError(Exception e);
     }
-
+    public interface SaveUserReactionCallback {
+        void onSuccess(String emoji);
+        void onError(Exception e);
+    }
+    public interface ReactionCountCallback {
+        void onSuccess(int count);
+        void onError(Exception e);
+    }
     public void getReactionsForMoment(@NonNull String momentId, @NonNull ReactionListCallback callback) {
         db.collection(COLLECTION_REACTIONS)
                 .whereEqualTo("momentId", momentId)
@@ -45,29 +52,58 @@ public class ReactionRepository {
     }
 
     public void saveReaction(String momentId, String userId, String emoji, SaveReactionCallback callback) {
-        // Kiểm tra xem user này đã thả cảm xúc vào ảnh này chưa
+        if (momentId == null || momentId.trim().isEmpty()
+                || userId == null || userId.trim().isEmpty()
+                || emoji == null || emoji.trim().isEmpty()) {
+            callback.onError(new IllegalArgumentException("Thiếu dữ liệu reaction"));
+            return;
+        }
+
+        String reactionId = momentId + "_" + userId;
+
+        Reaction reaction = new Reaction(
+                reactionId,
+                momentId,
+                userId,
+                emoji,
+                Timestamp.now()
+        );
+
+        db.collection(COLLECTION_REACTIONS)
+                .document(reactionId)
+                .set(reaction)
+                .addOnSuccessListener(unused -> callback.onSuccess())
+                .addOnFailureListener(callback::onError);
+    }
+    public void getUserReaction(String momentId, String userId, SaveUserReactionCallback callback) {
+        if (momentId == null || userId == null) {
+            callback.onSuccess("");
+            return;
+        }
+
+        String reactionId = momentId + "_" + userId;
+
+        db.collection(COLLECTION_REACTIONS)
+                .document(reactionId)
+                .get()
+                .addOnSuccessListener(document -> {
+                    if (!document.exists()) {
+                        callback.onSuccess("");
+                        return;
+                    }
+
+                    Reaction reaction = document.toObject(Reaction.class);
+                    callback.onSuccess(reaction == null ? "" : reaction.getEmoji());
+                })
+                .addOnFailureListener(callback::onError);
+    }
+
+
+    public void countReactionsForMoment(@NonNull String momentId, @NonNull ReactionCountCallback callback) {
         db.collection(COLLECTION_REACTIONS)
                 .whereEqualTo("momentId", momentId)
-                .whereEqualTo("userId", userId)
                 .get()
-                .addOnSuccessListener(snapshot -> {
-                    if (!snapshot.isEmpty()) {
-                        // Đã thả rồi -> Cập nhật lại emoji mới
-                        String existingDocId = snapshot.getDocuments().get(0).getId();
-                        db.collection(COLLECTION_REACTIONS).document(existingDocId)
-                                .update("emoji", emoji, "createdAt", Timestamp.now())
-                                .addOnSuccessListener(aVoid -> callback.onSuccess())
-                                .addOnFailureListener(callback::onError);
-                    } else {
-                        // Chưa thả -> Tạo mới
-                        String newId = db.collection(COLLECTION_REACTIONS).document().getId();
-                        Reaction newReaction = new Reaction(newId, momentId, userId, emoji, Timestamp.now());
-                        db.collection(COLLECTION_REACTIONS).document(newId)
-                                .set(newReaction)
-                                .addOnSuccessListener(aVoid -> callback.onSuccess())
-                                .addOnFailureListener(callback::onError);
-                    }
-                })
+                .addOnSuccessListener(snapshot -> callback.onSuccess(snapshot.size()))
                 .addOnFailureListener(callback::onError);
     }
 }
