@@ -57,9 +57,9 @@ public class MomentAdapter extends RecyclerView.Adapter<MomentAdapter.MomentView
         holder.boundSenderId = senderId;
 
         holder.txtUsername.setText("Đang tải...");
-        holder.txtCaption.setText(moment.getCaption() == null ? "" : moment.getCaption());
         holder.imgAvatar.setImageResource(R.mipmap.ic_launcher);
-        holder.txtReactionCount.setText("0 reaction");
+        loadSenderInfo(holder, moment.getSenderId());
+        loadReactionCount(holder, moment.getMomentId());
 
         if (moment.getMomentId() != null && !moment.getMomentId().isEmpty()) {
             reactionRepository.countReactionsForMoment(moment.getMomentId(), new ReactionRepository.ReactionCountCallback() {
@@ -128,13 +128,10 @@ public class MomentAdapter extends RecyclerView.Adapter<MomentAdapter.MomentView
             return;
         }
 
-        String name = user.getFullName();
-        String username = user.getUsername();
-
-        if (name != null && !name.trim().isEmpty()) {
-            holder.txtUsername.setText(name);
-        } else if (username != null && !username.trim().isEmpty()) {
-            holder.txtUsername.setText("@" + username);
+        if (user.getFullName() != null && !user.getFullName().trim().isEmpty()) {
+            holder.txtUsername.setText(user.getFullName());
+        } else if (user.getUsername() != null && !user.getUsername().trim().isEmpty()) {
+            holder.txtUsername.setText("@" + user.getUsername());
         } else {
             holder.txtUsername.setText("Người dùng MomentShare");
         }
@@ -149,6 +146,26 @@ public class MomentAdapter extends RecyclerView.Adapter<MomentAdapter.MomentView
         } else {
             holder.imgAvatar.setImageResource(R.mipmap.ic_launcher);
         }
+    }
+
+    private void loadReactionCount(@NonNull MomentViewHolder holder, String momentId) {
+        holder.txtReactionCount.setText("0 reaction");
+
+        if (momentId == null || momentId.trim().isEmpty()) {
+            return;
+        }
+
+        reactionRepository.countReactionsForMoment(momentId, new ReactionRepository.ReactionCountCallback() {
+            @Override
+            public void onSuccess(int count) {
+                holder.txtReactionCount.setText(count + (count == 1 ? " reaction" : " reactions"));
+            }
+
+            @Override
+            public void onError(Exception e) {
+                holder.txtReactionCount.setText("0 reaction");
+            }
+        });
     }
 
     @Override

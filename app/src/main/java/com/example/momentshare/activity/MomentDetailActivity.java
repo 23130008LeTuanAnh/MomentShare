@@ -240,7 +240,6 @@ public class MomentDetailActivity extends AppCompatActivity {
             @Override
             public void onSuccess() {
                 btnReportMoment.setEnabled(true);
-                Toast.makeText(MomentDetailActivity.this, "Đã gửi báo cáo cho Admin", Toast.LENGTH_SHORT).show();
             }
 
             @Override
@@ -303,12 +302,6 @@ public class MomentDetailActivity extends AppCompatActivity {
                 public void onSuccess() {
                     selectedReaction = reactionEmoji;
                     txtSelectedReaction.setText("Your reaction: " + selectedReaction);
-
-                    Toast.makeText(
-                            MomentDetailActivity.this,
-                            isChangingReaction ? "Đã đổi cảm xúc" : "Đã thả cảm xúc",
-                            Toast.LENGTH_SHORT
-                    ).show();
 
                     loadReactions();
                     sendReactionNotificationToMomentOwner(reactionEmoji);
