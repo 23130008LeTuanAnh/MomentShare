@@ -82,25 +82,38 @@ public class FriendListActivity extends AppCompatActivity {
         rvFriendList = findViewById(R.id.rvFriendList);
 
         rvFriendList.setLayoutManager(new LinearLayoutManager(this));
+
         adapter = new FriendAdapter(this, displayedFriends, false);
+
         adapter.setOnFriendRemovedListener(removedUser -> {
             removeUserFromList(allFriends, removedUser);
             removeUserFromList(displayedFriends, removedUser);
+
             adapter.notifyDataSetChanged();
             updateEmptyState();
         });
+
         rvFriendList.setAdapter(adapter);
     }
 
     private void setupEvents() {
         btnBack.setOnClickListener(v -> finish());
-        btnAdd.setOnClickListener(v -> startActivity(new Intent(this, SearchFriendActivity.class)));
+
+        btnAdd.setOnClickListener(v ->
+                startActivity(new Intent(this, SearchFriendActivity.class))
+        );
+
         btnRefresh.setOnClickListener(v -> loadFriendList());
-        btnChatList.setOnClickListener(v -> startActivity(new Intent(this, ChatListActivity.class)));
+
+        btnChatList.setOnClickListener(v ->
+                startActivity(new Intent(this, ChatListActivity.class))
+        );
 
         edtSearchFriendList.addTextChangedListener(new android.text.TextWatcher() {
             @Override
-            public void beforeTextChanged(CharSequence s, int start, int count, int after) { }
+            public void beforeTextChanged(CharSequence s, int start, int count, int after) {
+                // Không cần xử lý trước khi text thay đổi.
+            }
 
             @Override
             public void onTextChanged(CharSequence s, int start, int before, int count) {
@@ -108,18 +121,26 @@ public class FriendListActivity extends AppCompatActivity {
             }
 
             @Override
-            public void afterTextChanged(android.text.Editable s) { }
+            public void afterTextChanged(android.text.Editable s) {
+                // Không cần xử lý sau khi text thay đổi.
+            }
         });
     }
 
     private void loadFriendList() {
         setLoading(true);
+
         friendRepository.getFriendList(currentUserId, new FriendRepository.UserListCallback() {
             @Override
             public void onSuccess(List<User> users) {
                 setLoading(false);
+
                 allFriends.clear();
-                allFriends.addAll(users);
+
+                if (users != null) {
+                    allFriends.addAll(users);
+                }
+
                 filterFriendList(edtSearchFriendList.getText().toString());
             }
 
@@ -134,6 +155,7 @@ public class FriendListActivity extends AppCompatActivity {
 
     private void filterFriendList(String keyword) {
         String normalizedKeyword = normalizeSearchText(keyword);
+
         displayedFriends.clear();
 
         if (normalizedKeyword.isEmpty()) {
@@ -151,7 +173,9 @@ public class FriendListActivity extends AppCompatActivity {
     }
 
     private boolean matchesKeyword(User user, String normalizedKeyword) {
-        if (user == null) return false;
+        if (user == null) {
+            return false;
+        }
 
         String fullName = normalizeSearchText(user.getFullName());
         String username = normalizeSearchText(user.getUsername());
@@ -163,9 +187,16 @@ public class FriendListActivity extends AppCompatActivity {
     }
 
     private void updateEmptyState() {
-        String keyword = edtSearchFriendList == null ? "" : edtSearchFriendList.getText().toString().trim();
+        String keyword = edtSearchFriendList == null
+                ? ""
+                : edtSearchFriendList.getText().toString().trim();
 
-        txtFriendCount.setText("Tổng: " + allFriends.size() + " bạn bè | Đang hiển thị: " + displayedFriends.size());
+        txtFriendCount.setText(
+                "Tổng: " + allFriends.size()
+                        + " bạn bè | Đang hiển thị: "
+                        + displayedFriends.size()
+        );
+
         rvFriendList.setVisibility(displayedFriends.isEmpty() ? View.GONE : View.VISIBLE);
         txtNoFriend.setVisibility(displayedFriends.isEmpty() ? View.VISIBLE : View.GONE);
 
@@ -180,24 +211,52 @@ public class FriendListActivity extends AppCompatActivity {
 
     private void setLoading(boolean isLoading) {
         progressBar.setVisibility(isLoading ? View.VISIBLE : View.GONE);
-        rvFriendList.setVisibility(isLoading ? View.GONE : rvFriendList.getVisibility());
-        txtNoFriend.setVisibility(View.GONE);
+
+        if (isLoading) {
+            rvFriendList.setVisibility(View.GONE);
+            txtNoFriend.setVisibility(View.GONE);
+        }
+
         btnAdd.setEnabled(!isLoading);
         btnRefresh.setEnabled(!isLoading);
         btnChatList.setEnabled(!isLoading);
     }
 
+    /**
+     * Xóa user khỏi danh sách.
+     *
+     * Không dùng users.removeIf(...) vì removeIf yêu cầu API 24,
+     * trong khi project đang để minSdk = 23.
+     */
     private void removeUserFromList(List<User> users, User removedUser) {
-        if (users == null || removedUser == null || removedUser.getUserId() == null) return;
-        users.removeIf(user -> user != null && removedUser.getUserId().equals(user.getUserId()));
+        if (users == null || removedUser == null || removedUser.getUserId() == null) {
+            return;
+        }
+
+        String removedUserId = removedUser.getUserId();
+
+        for (int i = users.size() - 1; i >= 0; i--) {
+            User user = users.get(i);
+
+            if (user != null && removedUserId.equals(user.getUserId())) {
+                users.remove(i);
+            }
+        }
     }
 
     private String normalizeSearchText(String value) {
-        if (value == null) return "";
+        if (value == null) {
+            return "";
+        }
 
-        String normalized = Normalizer.normalize(value.trim().toLowerCase(Locale.ROOT), Normalizer.Form.NFD);
+        String normalized = Normalizer.normalize(
+                value.trim().toLowerCase(Locale.ROOT),
+                Normalizer.Form.NFD
+        );
+
         normalized = DIACRITICS_PATTERN.matcher(normalized).replaceAll("");
         normalized = normalized.replace('đ', 'd').replace('Đ', 'd');
+
         return normalized;
     }
 }
