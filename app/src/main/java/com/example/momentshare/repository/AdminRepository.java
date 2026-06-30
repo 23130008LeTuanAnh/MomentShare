@@ -19,11 +19,12 @@ import java.util.List;
 import java.util.Map;
 
 /**
- * AdminRepository gom các thao tác quản trị: thống kê, quản lý người dùng và xử lý báo cáo.
+ * AdminRepository gom toàn bộ logic quản trị MomentShare.
  *
- * Đã chỉnh:
- * - Xử lý report vẫn thành công nếu momentId demo/không tồn tại.
- * - Nếu moment tồn tại thì ẩn moment bằng status hidden.
+ * Logic chính:
+ * - Quản lý người dùng: xem danh sách, khóa/mở khóa, đổi quyền.
+ * - Quản lý báo cáo: tạo report, bỏ qua report, ẩn moment bị báo cáo.
+ * - Thống kê: đếm user, moment, report theo trạng thái.
  */
 public class AdminRepository {
 
@@ -58,34 +59,50 @@ public class AdminRepository {
                 .get()
                 .addOnSuccessListener(querySnapshot -> {
                     List<User> users = new ArrayList<>();
+
                     for (QueryDocumentSnapshot document : querySnapshot) {
                         User user = document.toObject(User.class);
-                        if (user != null) users.add(user);
+                        if (user != null) {
+                            if (user.getUserId() == null || user.getUserId().trim().isEmpty()) {
+                                user.setUserId(document.getId());
+                            }
+                            users.add(user);
+                        }
                     }
+
                     sortUsersByName(users);
                     callback.onSuccess(users);
                 })
-                .addOnFailureListener(e -> callback.onFailure("Không tải được danh sách người dùng: " + e.getMessage()));
+                .addOnFailureListener(e ->
+                        callback.onFailure("Không tải được danh sách người dùng: " + e.getMessage()));
     }
 
     public void updateUserStatus(@NonNull String userId,
                                  @NonNull String status,
                                  @NonNull ActionCallback callback) {
+        Map<String, Object> updates = new HashMap<>();
+        updates.put("status", status);
+
         db.collection(Constants.COLLECTION_USERS)
                 .document(userId)
-                .update("status", status)
+                .update(updates)
                 .addOnSuccessListener(unused -> callback.onSuccess())
-                .addOnFailureListener(e -> callback.onFailure("Không thể cập nhật trạng thái tài khoản: " + e.getMessage()));
+                .addOnFailureListener(e ->
+                        callback.onFailure("Không thể cập nhật trạng thái tài khoản: " + e.getMessage()));
     }
 
     public void updateUserRole(@NonNull String userId,
                                @NonNull String role,
                                @NonNull ActionCallback callback) {
+        Map<String, Object> updates = new HashMap<>();
+        updates.put("role", role);
+
         db.collection(Constants.COLLECTION_USERS)
                 .document(userId)
-                .update("role", role)
+                .update(updates)
                 .addOnSuccessListener(unused -> callback.onSuccess())
-                .addOnFailureListener(e -> callback.onFailure("Không thể cập nhật quyền tài khoản: " + e.getMessage()));
+                .addOnFailureListener(e ->
+                        callback.onFailure("Không thể cập nhật quyền tài khoản: " + e.getMessage()));
     }
 
     public void loadReports(@NonNull ReportsCallback callback) {
@@ -93,14 +110,22 @@ public class AdminRepository {
                 .get()
                 .addOnSuccessListener(querySnapshot -> {
                     List<ReportModel> reports = new ArrayList<>();
+
                     for (QueryDocumentSnapshot document : querySnapshot) {
                         ReportModel report = document.toObject(ReportModel.class);
-                        if (report != null) reports.add(report);
+                        if (report != null) {
+                            if (report.getReportId() == null || report.getReportId().trim().isEmpty()) {
+                                report.setReportId(document.getId());
+                            }
+                            reports.add(report);
+                        }
                     }
-                    sortReportsByNewest(reports);
+
+                    sortReports(reports);
                     callback.onSuccess(reports);
                 })
-                .addOnFailureListener(e -> callback.onFailure("Không tải được danh sách báo cáo: " + e.getMessage()));
+                .addOnFailureListener(e ->
+                        callback.onFailure("Không tải được danh sách báo cáo: " + e.getMessage()));
     }
 
     public void createReport(@NonNull String reporterId,
@@ -112,6 +137,7 @@ public class AdminRepository {
             return;
         }
 
+        // Chặn user báo cáo trùng cùng một moment.
         db.collection(Constants.COLLECTION_REPORTS)
                 .whereEqualTo("reporterId", reporterId)
                 .whereEqualTo("momentId", momentId)
@@ -124,6 +150,7 @@ public class AdminRepository {
                     }
 
                     String reportId = db.collection(Constants.COLLECTION_REPORTS).document().getId();
+
                     ReportModel report = new ReportModel(
                             reportId,
                             reporterId,
@@ -139,22 +166,38 @@ public class AdminRepository {
                             .document(reportId)
                             .set(report)
                             .addOnSuccessListener(unused -> callback.onSuccess())
-                            .addOnFailureListener(e -> callback.onFailure("Không thể tạo báo cáo: " + e.getMessage()));
+                            .addOnFailureListener(e ->
+                                    callback.onFailure("Không thể tạo báo cáo: " + e.getMessage()));
                 })
-                .addOnFailureListener(e -> callback.onFailure("Không thể kiểm tra báo cáo trùng: " + e.getMessage()));
+                .addOnFailureListener(e ->
+                        callback.onFailure("Không thể kiểm tra báo cáo trùng: " + e.getMessage()));
     }
 
+    /**
+     * Admin bỏ qua báo cáo vì nội dung không vi phạm.
+     */
     public void ignoreReport(@NonNull String reportId,
                              @NonNull String handledBy,
                              @NonNull ActionCallback callback) {
         updateReport(reportId, Constants.REPORT_STATUS_IGNORED, handledBy, callback);
     }
 
+    /**
+     * Admin xử lý report bằng cách ẩn moment và đánh dấu report resolved.
+     *
+     * Nếu momentId không tồn tại hoặc là dữ liệu demo, vẫn cập nhật report thành resolved
+     * để màn hình admin không bị kẹt report pending.
+     */
     public void resolveReportAndHideMoment(@NonNull String reportId,
                                            @NonNull String momentId,
                                            @NonNull String handledBy,
                                            @NonNull ActionCallback callback) {
-        if (momentId == null || momentId.trim().isEmpty()) {
+        if (reportId.trim().isEmpty()) {
+            callback.onFailure("Không xác định được báo cáo cần xử lý");
+            return;
+        }
+
+        if (momentId.trim().isEmpty()) {
             updateReport(reportId, Constants.REPORT_STATUS_RESOLVED, handledBy, callback);
             return;
         }
@@ -164,6 +207,7 @@ public class AdminRepository {
                 .get()
                 .addOnSuccessListener(momentDoc -> {
                     WriteBatch batch = db.batch();
+
                     batch.update(
                             db.collection(Constants.COLLECTION_REPORTS).document(reportId),
                             buildHandledReportData(Constants.REPORT_STATUS_RESOLVED, handledBy)
@@ -179,44 +223,94 @@ public class AdminRepository {
 
                     batch.commit()
                             .addOnSuccessListener(unused -> callback.onSuccess())
-                            .addOnFailureListener(e -> callback.onFailure("Không thể xử lý báo cáo: " + e.getMessage()));
+                            .addOnFailureListener(e ->
+                                    callback.onFailure("Không thể xử lý báo cáo: " + e.getMessage()));
                 })
-                .addOnFailureListener(e -> callback.onFailure("Không thể kiểm tra khoảnh khắc bị báo cáo: " + e.getMessage()));
+                .addOnFailureListener(e ->
+                        callback.onFailure("Không thể kiểm tra khoảnh khắc bị báo cáo: " + e.getMessage()));
     }
 
     public void loadStatistics(@NonNull StatisticsCallback callback) {
         final int[] totalUsers = {0};
+        final int[] activeUsers = {0};
         final int[] lockedUsers = {0};
+
         final int[] totalMoments = {0};
+        final int[] activeMoments = {0};
+        final int[] hiddenMoments = {0};
+
         final int[] totalReports = {0};
         final int[] pendingReports = {0};
+        final int[] resolvedReports = {0};
+        final int[] ignoredReports = {0};
 
         db.collection(Constants.COLLECTION_USERS)
                 .get()
                 .addOnSuccessListener(usersSnapshot -> {
                     totalUsers[0] = usersSnapshot.size();
+
                     for (QueryDocumentSnapshot document : usersSnapshot) {
-                        if (Constants.STATUS_LOCKED.equals(document.getString("status"))) lockedUsers[0]++;
+                        String status = document.getString("status");
+                        if (Constants.STATUS_LOCKED.equals(status)) {
+                            lockedUsers[0]++;
+                        } else {
+                            activeUsers[0]++;
+                        }
                     }
 
                     db.collection(Constants.COLLECTION_MOMENTS)
                             .get()
                             .addOnSuccessListener(momentsSnapshot -> {
                                 totalMoments[0] = momentsSnapshot.size();
+
+                                for (QueryDocumentSnapshot document : momentsSnapshot) {
+                                    String status = document.getString("status");
+                                    if (Constants.MOMENT_STATUS_HIDDEN.equals(status)) {
+                                        hiddenMoments[0]++;
+                                    } else if (Constants.MOMENT_STATUS_DELETED.equals(status)) {
+                                        // Không tính deleted là active.
+                                    } else {
+                                        activeMoments[0]++;
+                                    }
+                                }
+
                                 db.collection(Constants.COLLECTION_REPORTS)
                                         .get()
                                         .addOnSuccessListener(reportsSnapshot -> {
                                             totalReports[0] = reportsSnapshot.size();
+
                                             for (QueryDocumentSnapshot document : reportsSnapshot) {
-                                                if (Constants.REPORT_STATUS_PENDING.equals(document.getString("status"))) pendingReports[0]++;
+                                                String status = document.getString("status");
+                                                if (Constants.REPORT_STATUS_RESOLVED.equals(status)) {
+                                                    resolvedReports[0]++;
+                                                } else if (Constants.REPORT_STATUS_IGNORED.equals(status)) {
+                                                    ignoredReports[0]++;
+                                                } else {
+                                                    pendingReports[0]++;
+                                                }
                                             }
-                                            callback.onSuccess(new StatisticsModel(totalUsers[0], totalMoments[0], totalReports[0], pendingReports[0], lockedUsers[0]));
+
+                                            callback.onSuccess(new StatisticsModel(
+                                                    totalUsers[0],
+                                                    activeUsers[0],
+                                                    lockedUsers[0],
+                                                    totalMoments[0],
+                                                    activeMoments[0],
+                                                    hiddenMoments[0],
+                                                    totalReports[0],
+                                                    pendingReports[0],
+                                                    resolvedReports[0],
+                                                    ignoredReports[0]
+                                            ));
                                         })
-                                        .addOnFailureListener(e -> callback.onFailure("Không tải được thống kê báo cáo: " + e.getMessage()));
+                                        .addOnFailureListener(e ->
+                                                callback.onFailure("Không tải được thống kê báo cáo: " + e.getMessage()));
                             })
-                            .addOnFailureListener(e -> callback.onFailure("Không tải được thống kê khoảnh khắc: " + e.getMessage()));
+                            .addOnFailureListener(e ->
+                                    callback.onFailure("Không tải được thống kê khoảnh khắc: " + e.getMessage()));
                 })
-                .addOnFailureListener(e -> callback.onFailure("Không tải được thống kê người dùng: " + e.getMessage()));
+                .addOnFailureListener(e ->
+                        callback.onFailure("Không tải được thống kê người dùng: " + e.getMessage()));
     }
 
     private void updateReport(@NonNull String reportId,
@@ -227,26 +321,50 @@ public class AdminRepository {
                 .document(reportId)
                 .update(buildHandledReportData(status, handledBy))
                 .addOnSuccessListener(unused -> callback.onSuccess())
-                .addOnFailureListener(e -> callback.onFailure("Không thể cập nhật báo cáo: " + e.getMessage()));
+                .addOnFailureListener(e ->
+                        callback.onFailure("Không thể cập nhật báo cáo: " + e.getMessage()));
     }
 
     private Map<String, Object> buildHandledReportData(@NonNull String status,
                                                        @NonNull String handledBy) {
-        Map<String, Object> updates = new HashMap<>();
-        updates.put("status", status);
-        updates.put("handledBy", handledBy);
-        updates.put("handledAt", Timestamp.now());
-        return updates;
+        Map<String, Object> data = new HashMap<>();
+        data.put("status", status);
+        data.put("handledBy", handledBy);
+        data.put("handledAt", Timestamp.now());
+        return data;
     }
 
     private void sortUsersByName(@NonNull List<User> users) {
-        Collections.sort(users, (left, right) -> safeText(left.getFullName()).compareToIgnoreCase(safeText(right.getFullName())));
+        Collections.sort(users, (left, right) -> {
+            String leftName = buildUserSortName(left);
+            String rightName = buildUserSortName(right);
+            return leftName.compareToIgnoreCase(rightName);
+        });
     }
 
-    private void sortReportsByNewest(@NonNull List<ReportModel> reports) {
+    private String buildUserSortName(User user) {
+        if (user == null) return "";
+        String fullName = user.getFullName();
+        if (fullName != null && !fullName.trim().isEmpty()) return fullName.trim();
+        String username = user.getUsername();
+        if (username != null && !username.trim().isEmpty()) return username.trim();
+        String email = user.getEmail();
+        if (email != null && !email.trim().isEmpty()) return email.trim();
+        return "";
+    }
+
+    private void sortReports(@NonNull List<ReportModel> reports) {
         Collections.sort(reports, (left, right) -> {
+            int leftPriority = getReportPriority(left);
+            int rightPriority = getReportPriority(right);
+
+            if (leftPriority != rightPriority) {
+                return leftPriority - rightPriority;
+            }
+
             Timestamp leftTime = left.getCreatedAt();
             Timestamp rightTime = right.getCreatedAt();
+
             if (leftTime == null && rightTime == null) return 0;
             if (leftTime == null) return 1;
             if (rightTime == null) return -1;
@@ -254,7 +372,10 @@ public class AdminRepository {
         });
     }
 
-    private String safeText(String value) {
-        return value == null ? "" : value.trim();
+    private int getReportPriority(ReportModel report) {
+        if (report == null || report.getStatus() == null) return 1;
+        if (Constants.REPORT_STATUS_PENDING.equals(report.getStatus())) return 0;
+        if (Constants.REPORT_STATUS_RESOLVED.equals(report.getStatus())) return 1;
+        return 2;
     }
 }
