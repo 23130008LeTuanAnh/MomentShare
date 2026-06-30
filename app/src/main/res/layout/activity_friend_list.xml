@@ -38,6 +38,15 @@
             android:contentDescription="Tải lại"
             android:src="@android:drawable/ic_menu_rotate" />
 
+
+        <ImageButton
+            android:id="@+id/btnChatListFromFriendList"
+            android:layout_width="48dp"
+            android:layout_height="48dp"
+            android:background="?attr/selectableItemBackgroundBorderless"
+            android:contentDescription="Tin nhắn"
+            android:src="@android:drawable/ic_dialog_email" />
+
         <ImageButton
             android:id="@+id/btnAddFriend"
             android:layout_width="48dp"
