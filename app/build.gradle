@@ -30,6 +30,10 @@ android {
     }
 
     compileOptions {
+        // Bật desugaring để dùng được API Java mới như List.sort, removeIf
+        // trên thiết bị Android thấp hơn API 24.
+        coreLibraryDesugaringEnabled true
+
         // Project đang dùng Java 11.
         sourceCompatibility = JavaVersion.VERSION_11
         targetCompatibility = JavaVersion.VERSION_11
@@ -37,6 +41,9 @@ android {
 }
 
 dependencies {
+    // Desugaring sửa lỗi Lint NewApi với Java API mới trên minSdk 23.
+    coreLibraryDesugaring 'com.android.tools:desugar_jdk_libs:2.1.5'
+
     // AndroidX và Material UI.
     implementation libs.activity.ktx
     implementation libs.appcompat
