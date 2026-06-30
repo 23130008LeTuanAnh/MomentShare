@@ -3,78 +3,264 @@
     xmlns:android="http://schemas.android.com/apk/res/android"
     xmlns:app="http://schemas.android.com/apk/res-auto"
     xmlns:tools="http://schemas.android.com/tools"
+    android:id="@+id/rootHomeFeed"
     android:layout_width="match_parent"
     android:layout_height="match_parent"
-    android:background="#000000"
+    android:background="@color/ms_screen"
+    android:fitsSystemWindows="true"
+    android:paddingStart="16dp"
+    android:paddingTop="12dp"
+    android:paddingEnd="16dp"
+    android:paddingBottom="10dp"
     tools:context=".activity.HomeFeedActivity">
+
+    <!-- Header: không bị che thanh trạng thái phía trên -->
+    <LinearLayout
+        android:id="@+id/homeHeader"
+        android:layout_width="0dp"
+        android:layout_height="56dp"
+        android:gravity="center_vertical"
+        android:orientation="horizontal"
+        app:layout_constraintEnd_toEndOf="parent"
+        app:layout_constraintStart_toStartOf="parent"
+        app:layout_constraintTop_toTopOf="parent">
+
+        <!-- Giữ id để Java không lỗi, nhưng ẩn vì trang chủ không cần nút quay lại -->
+        <ImageButton
+            android:id="@+id/btnBackHome"
+            android:layout_width="40dp"
+            android:layout_height="40dp"
+            android:background="@drawable/bg_ms_round_icon"
+            android:contentDescription="Quay lại"
+            android:padding="11dp"
+            android:src="@android:drawable/ic_media_previous"
+            android:visibility="gone"
+            app:tint="@color/ms_text" />
+
+        <TextView
+            android:id="@+id/txtTitle"
+            android:layout_width="0dp"
+            android:layout_height="wrap_content"
+            android:layout_weight="1"
+            android:ellipsize="end"
+            android:fontFamily="sans-serif-medium"
+            android:singleLine="true"
+            android:text="MomentShare"
+            android:textColor="@color/ms_primary"
+            android:textSize="24sp"
+            android:textStyle="bold" />
+
+        <ImageButton
+            android:id="@+id/btnOpenHistory"
+            android:layout_width="40dp"
+            android:layout_height="40dp"
+            android:background="@drawable/bg_ms_round_icon"
+            android:contentDescription="Lịch sử"
+            android:padding="10dp"
+            android:src="@android:drawable/ic_menu_recent_history"
+            app:tint="@color/ms_text" />
+    </LinearLayout>
+
+    <TextView
+        android:id="@+id/txtHomeSubTitle"
+        android:layout_width="0dp"
+        android:layout_height="wrap_content"
+        android:layout_marginTop="2dp"
+        android:text="💖 Khoảnh khắc mới từ bạn bè"
+        android:textColor="@color/ms_text"
+        android:textSize="16sp"
+        android:textStyle="bold"
+        app:layout_constraintEnd_toEndOf="parent"
+        app:layout_constraintStart_toStartOf="parent"
+        app:layout_constraintTop_toBottomOf="@id/homeHeader" />
 
     <androidx.recyclerview.widget.RecyclerView
         android:id="@+id/rvHomeFeed"
         android:layout_width="0dp"
         android:layout_height="0dp"
+        android:layout_marginTop="10dp"
         android:clipToPadding="false"
-        android:paddingTop="80dp"
-        android:paddingBottom="140dp"
-        app:layout_constraintBottom_toBottomOf="parent"
+        android:overScrollMode="never"
+        android:paddingBottom="18dp"
+        app:layout_constraintBottom_toTopOf="@id/bottomNavPanel"
         app:layout_constraintEnd_toEndOf="parent"
         app:layout_constraintStart_toStartOf="parent"
-        app:layout_constraintTop_toTopOf="parent"
+        app:layout_constraintTop_toBottomOf="@id/txtHomeSubTitle"
         tools:listitem="@layout/item_moment_feed" />
 
-    <TextView
-        android:id="@+id/txtTitle"
-        android:layout_width="wrap_content"
-        android:layout_height="wrap_content"
-        android:layout_marginTop="24dp"
-        android:text="MomentShare"
-        android:textColor="#FFFFFF"
-        android:textSize="22sp"
-        android:textStyle="bold"
-        android:letterSpacing="0.05"
-        app:layout_constraintEnd_toEndOf="parent"
-        app:layout_constraintStart_toStartOf="parent"
-        app:layout_constraintTop_toTopOf="parent" />
-
-    <ImageButton
-        android:id="@+id/btnBackHome"
-        android:layout_width="44dp"
-        android:layout_height="44dp"
-        android:layout_marginStart="16dp"
-        android:background="@drawable/bg_circle_camera"
-        android:backgroundTint="#33FFFFFF"
-        android:contentDescription="Quay lại"
-        android:padding="12dp"
-        android:src="@android:drawable/ic_media_previous"
-        app:tint="#FFFFFF"
-        app:layout_constraintBottom_toBottomOf="@id/txtTitle"
-        app:layout_constraintStart_toStartOf="parent"
-        app:layout_constraintTop_toTopOf="@id/txtTitle" />
-
-    <ImageButton
-        android:id="@+id/btnOpenHistory"
-        android:layout_width="44dp"
-        android:layout_height="44dp"
-        android:layout_marginEnd="16dp"
-        android:background="@drawable/bg_circle_camera"
-        android:backgroundTint="#33FFFFFF"
-        android:contentDescription="Lịch sử"
-        android:padding="12dp"
-        android:src="@android:drawable/ic_menu_recent_history"
-        app:tint="#FFFFFF"
-        app:layout_constraintBottom_toBottomOf="@id/txtTitle"
-        app:layout_constraintEnd_toEndOf="parent"
-        app:layout_constraintTop_toTopOf="@id/txtTitle" />
-
-    <ImageButton
-        android:id="@+id/btnOpenCamera"
-        android:layout_width="84dp"
-        android:layout_height="84dp"
-        android:layout_marginBottom="32dp"
-        android:background="@drawable/bg_circle_camera"
-        android:contentDescription="Mở Camera Chụp Ảnh"
-        android:elevation="10dp"
+    <!-- Bottom navigation cần các id này để HomeFeedActivity.java build được:
+         navHistory, navChat, navShare -->
+    <LinearLayout
+        android:id="@+id/bottomNavPanel"
+        android:layout_width="0dp"
+        android:layout_height="66dp"
+        android:layout_marginBottom="2dp"
+        android:background="@drawable/bg_ms_bottom_nav"
+        android:gravity="center"
+        android:orientation="horizontal"
+        android:paddingStart="10dp"
+        android:paddingEnd="10dp"
+        android:elevation="8dp"
         app:layout_constraintBottom_toBottomOf="parent"
         app:layout_constraintEnd_toEndOf="parent"
-        app:layout_constraintStart_toStartOf="parent" />
+        app:layout_constraintStart_toStartOf="parent">
+
+        <LinearLayout
+            android:id="@+id/navHome"
+            android:layout_width="0dp"
+            android:layout_height="match_parent"
+            android:layout_weight="1"
+            android:gravity="center"
+            android:orientation="vertical">
+
+            <TextView
+                android:layout_width="28dp"
+                android:layout_height="28dp"
+                android:background="@drawable/bg_ms_bottom_nav_active"
+                android:gravity="center"
+                android:text="⌂"
+                android:textColor="@color/white"
+                android:textSize="17sp"
+                android:textStyle="bold" />
+
+            <TextView
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:layout_marginTop="2dp"
+                android:text="Trang chủ"
+                android:textColor="@color/ms_primary"
+                android:textSize="10sp"
+                android:textStyle="bold" />
+        </LinearLayout>
+
+        <LinearLayout
+            android:id="@+id/navFriends"
+            android:layout_width="0dp"
+            android:layout_height="match_parent"
+            android:layout_weight="1"
+            android:gravity="center"
+            android:orientation="vertical">
+
+            <TextView
+                android:layout_width="28dp"
+                android:layout_height="28dp"
+                android:gravity="center"
+                android:text="👥"
+                android:textSize="17sp" />
+
+            <TextView
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:layout_marginTop="2dp"
+                android:text="Bạn bè"
+                android:textColor="@color/ms_text_secondary"
+                android:textSize="10sp" />
+        </LinearLayout>
+
+        <FrameLayout
+            android:layout_width="0dp"
+            android:layout_height="match_parent"
+            android:layout_weight="1"
+            android:clipChildren="false"
+            android:clipToPadding="false">
+
+            <ImageButton
+                android:id="@+id/btnOpenCamera"
+                android:layout_width="58dp"
+                android:layout_height="58dp"
+                android:layout_gravity="center"
+                android:background="@drawable/bg_ms_round_primary"
+                android:contentDescription="Mở Camera Chụp Ảnh"
+                android:elevation="10dp"
+                android:padding="15dp"
+                android:src="@android:drawable/ic_menu_camera"
+                app:tint="@color/white" />
+        </FrameLayout>
+
+        <LinearLayout
+            android:id="@+id/navHistory"
+            android:layout_width="0dp"
+            android:layout_height="match_parent"
+            android:layout_weight="1"
+            android:clickable="true"
+            android:focusable="true"
+            android:gravity="center"
+            android:orientation="vertical">
+
+            <TextView
+                android:layout_width="28dp"
+                android:layout_height="28dp"
+                android:gravity="center"
+                android:text="◷"
+                android:textColor="@color/ms_text_secondary"
+                android:textSize="18sp"
+                android:textStyle="bold" />
+
+            <TextView
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:layout_marginTop="2dp"
+                android:text="Lịch sử"
+                android:textColor="@color/ms_text_secondary"
+                android:textSize="10sp" />
+        </LinearLayout>
+
+        <LinearLayout
+            android:id="@+id/navChat"
+            android:layout_width="0dp"
+            android:layout_height="match_parent"
+            android:layout_weight="1"
+            android:clickable="true"
+            android:focusable="true"
+            android:gravity="center"
+            android:orientation="vertical">
+
+            <TextView
+                android:layout_width="28dp"
+                android:layout_height="28dp"
+                android:gravity="center"
+                android:text="✉"
+                android:textColor="@color/ms_text_secondary"
+                android:textSize="17sp"
+                android:textStyle="bold" />
+
+            <TextView
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:layout_marginTop="2dp"
+                android:text="Nhắn tin"
+                android:textColor="@color/ms_text_secondary"
+                android:textSize="10sp" />
+        </LinearLayout>
+
+        <!-- Java đang tìm R.id.navShare nhưng thực tế dùng để mở ProfileActivity -->
+        <LinearLayout
+            android:id="@+id/navShare"
+            android:layout_width="0dp"
+            android:layout_height="match_parent"
+            android:layout_weight="1"
+            android:clickable="true"
+            android:focusable="true"
+            android:gravity="center"
+            android:orientation="vertical">
+
+            <TextView
+                android:layout_width="28dp"
+                android:layout_height="28dp"
+                android:gravity="center"
+                android:text="♡"
+                android:textColor="@color/ms_text_secondary"
+                android:textSize="19sp"
+                android:textStyle="bold" />
+
+            <TextView
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:layout_marginTop="2dp"
+                android:text="Hồ sơ"
+                android:textColor="@color/ms_text_secondary"
+                android:textSize="10sp" />
+        </LinearLayout>
+    </LinearLayout>
 
 </androidx.constraintlayout.widget.ConstraintLayout>
