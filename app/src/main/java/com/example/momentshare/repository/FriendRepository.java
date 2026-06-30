@@ -23,10 +23,9 @@ import java.util.Map;
  * - Kiểm tra trạng thái quan hệ giữa 2 user.
  *
  * Đã chỉnh:
- * - Bỏ orderBy("createdAt") trong query lời mời kết bạn để tránh lỗi Firestore FAILED_PRECONDITION
- *   khi chưa tạo composite index.
- * - Sắp xếp danh sách lời mời bằng Java sau khi lấy dữ liệu.
- * - Bổ sung thông báo rõ ràng khi đã là bạn bè hoặc đã có lời mời đang chờ.
+ * - Bỏ các query có orderBy hoặc nhiều điều kiện không cần thiết để tránh Firestore FAILED_PRECONDITION.
+ * - Lọc status pending bằng Java sau khi lấy dữ liệu.
+ * - Thêm hàm đếm lời mời kết bạn đang chờ để hiển thị số lượng trên Profile.
  */
 public class FriendRepository {
 
@@ -60,6 +59,11 @@ public class FriendRepository {
         void onFailure(String errorMessage);
     }
 
+    public interface CountCallback {
+        void onSuccess(int count);
+        void onFailure(String errorMessage);
+    }
+
     /**
      * Tìm kiếm người dùng theo username hoặc email.
      */
@@ -82,6 +86,9 @@ public class FriendRepository {
                     for (DocumentSnapshot doc : querySnapshot.getDocuments()) {
                         User user = doc.toObject(User.class);
                         if (user != null) {
+                            if (isEmpty(user.getUserId())) {
+                                user.setUserId(doc.getId());
+                            }
                             users.add(user);
                         }
                     }
@@ -101,6 +108,9 @@ public class FriendRepository {
                                 for (DocumentSnapshot doc : emailSnapshot.getDocuments()) {
                                     User user = doc.toObject(User.class);
                                     if (user != null) {
+                                        if (isEmpty(user.getUserId())) {
+                                            user.setUserId(doc.getId());
+                                        }
                                         users.add(user);
                                     }
                                 }
@@ -114,11 +124,7 @@ public class FriendRepository {
     /**
      * Gửi lời mời kết bạn.
      *
-     * Logic thông báo:
-     * - Nếu chưa có quan hệ: tạo friend_request và tạo notification cho người nhận.
-     * - Nếu đã là bạn bè: không tạo notification mới, chỉ trả thông báo cho màn hình hiện tại.
-     * - Nếu đã gửi lời mời: không tạo notification trùng.
-     * - Nếu người kia đã gửi lời mời cho mình: yêu cầu user vào màn hình Lời mời kết bạn để chấp nhận.
+     * Nếu đã là bạn bè hoặc đã có lời mời đang chờ thì không tạo notification trùng.
      */
     public void sendFriendRequest(String senderId, String receiverId, ActionCallback callback) {
         checkFriendshipStatus(senderId, receiverId, new StatusCallback() {
@@ -186,16 +192,13 @@ public class FriendRepository {
     }
 
     /**
-     * Lấy các lời mời kết bạn đang chờ gửi tới user hiện tại.
+     * Lấy lời mời kết bạn đang chờ gửi tới user hiện tại.
      *
-     * Lý do bỏ orderBy:
-     * Firestore báo FAILED_PRECONDITION nếu query dùng nhiều whereEqualTo kèm orderBy
-     * nhưng chưa tạo composite index. Để demo ổn định, app lấy dữ liệu trước rồi sort bằng Java.
+     * Chỉ query receiverId rồi lọc status bằng Java để tránh lỗi Firestore composite index.
      */
     public void getPendingRequests(String userId, RequestListCallback callback) {
         db.collection(Constants.COLLECTION_FRIEND_REQUESTS)
                 .whereEqualTo("receiverId", userId)
-                .whereEqualTo("status", "pending")
                 .get()
                 .addOnSuccessListener(querySnapshot -> {
                     List<FriendRequest> requests = new ArrayList<>();
@@ -203,24 +206,35 @@ public class FriendRepository {
                     for (DocumentSnapshot doc : querySnapshot.getDocuments()) {
                         FriendRequest request = doc.toObject(FriendRequest.class);
 
-                        if (request != null) {
-                            if (request.getRequestId() == null || request.getRequestId().trim().isEmpty()) {
+                        if (request != null && isPending(request.getStatus())) {
+                            if (isEmpty(request.getRequestId())) {
                                 request.setRequestId(doc.getId());
                             }
                             requests.add(request);
                         }
                     }
 
-                    requests.sort((left, right) -> {
-                        if (left.getCreatedAt() == null && right.getCreatedAt() == null) return 0;
-                        if (left.getCreatedAt() == null) return 1;
-                        if (right.getCreatedAt() == null) return -1;
-                        return right.getCreatedAt().compareTo(left.getCreatedAt());
-                    });
-
+                    sortRequestsByNewest(requests);
                     callback.onSuccess(requests);
                 })
                 .addOnFailureListener(e -> callback.onFailure(buildErrorMessage(e)));
+    }
+
+    /**
+     * Đếm số lời mời kết bạn đang chờ để hiển thị lên nút Lời mời kết bạn.
+     */
+    public void countPendingRequests(String userId, CountCallback callback) {
+        getPendingRequests(userId, new RequestListCallback() {
+            @Override
+            public void onSuccess(List<FriendRequest> requests) {
+                callback.onSuccess(requests.size());
+            }
+
+            @Override
+            public void onFailure(String errorMessage) {
+                callback.onFailure(errorMessage);
+            }
+        });
     }
 
     /**
@@ -228,6 +242,11 @@ public class FriendRepository {
      * Tạo quan hệ bạn bè 2 chiều trong collection friends.
      */
     public void acceptFriendRequest(String requestId, String senderId, String receiverId, ActionCallback callback) {
+        if (isEmpty(requestId) || isEmpty(senderId) || isEmpty(receiverId)) {
+            callback.onFailure("Thiếu dữ liệu lời mời kết bạn");
+            return;
+        }
+
         WriteBatch batch = db.batch();
 
         batch.update(db.collection(Constants.COLLECTION_FRIEND_REQUESTS).document(requestId), "status", "accepted");
@@ -282,6 +301,11 @@ public class FriendRepository {
      * Từ chối lời mời kết bạn.
      */
     public void rejectFriendRequest(String requestId, ActionCallback callback) {
+        if (isEmpty(requestId)) {
+            callback.onFailure("Không xác định được lời mời cần từ chối");
+            return;
+        }
+
         db.collection(Constants.COLLECTION_FRIEND_REQUESTS)
                 .document(requestId)
                 .update("status", "rejected")
@@ -301,7 +325,7 @@ public class FriendRepository {
 
                     for (DocumentSnapshot doc : querySnapshot.getDocuments()) {
                         String friendUserId = doc.getString("friendUserId");
-                        if (friendUserId != null && !friendUserId.trim().isEmpty()) {
+                        if (!isEmpty(friendUserId)) {
                             friendIds.add(friendUserId);
                         }
                     }
@@ -321,6 +345,9 @@ public class FriendRepository {
                                 .addOnSuccessListener(userDoc -> {
                                     User user = userDoc.toObject(User.class);
                                     if (user != null) {
+                                        if (isEmpty(user.getUserId())) {
+                                            user.setUserId(userDoc.getId());
+                                        }
                                         friendUsers.add(user);
                                     }
 
@@ -356,6 +383,10 @@ public class FriendRepository {
 
     /**
      * Kiểm tra quan hệ hiện tại giữa 2 người dùng.
+     *
+     * Đã chỉnh:
+     * - Không query nhiều whereEqualTo cùng lúc.
+     * - Query theo senderId rồi tự lọc receiverId/status ở Java để tránh lỗi index.
      */
     public void checkFriendshipStatus(String userId, String otherId, StatusCallback callback) {
         db.collection(Constants.COLLECTION_FRIENDS)
@@ -367,34 +398,79 @@ public class FriendRepository {
                         return;
                     }
 
-                    db.collection(Constants.COLLECTION_FRIEND_REQUESTS)
-                            .whereEqualTo("senderId", userId)
-                            .whereEqualTo("receiverId", otherId)
-                            .whereEqualTo("status", "pending")
-                            .get()
-                            .addOnSuccessListener(sentRequests -> {
-                                if (!sentRequests.isEmpty()) {
-                                    callback.onSuccess("pending");
-                                    return;
-                                }
+                    checkSentPendingRequest(userId, otherId, new StatusCallback() {
+                        @Override
+                        public void onSuccess(String sentStatus) {
+                            if ("pending".equals(sentStatus)) {
+                                callback.onSuccess("pending");
+                                return;
+                            }
 
-                                db.collection(Constants.COLLECTION_FRIEND_REQUESTS)
-                                        .whereEqualTo("senderId", otherId)
-                                        .whereEqualTo("receiverId", userId)
-                                        .whereEqualTo("status", "pending")
-                                        .get()
-                                        .addOnSuccessListener(receivedRequests -> {
-                                            if (!receivedRequests.isEmpty()) {
-                                                callback.onSuccess("received_pending");
-                                            } else {
-                                                callback.onSuccess("none");
-                                            }
-                                        })
-                                        .addOnFailureListener(e -> callback.onFailure(buildErrorMessage(e)));
-                            })
-                            .addOnFailureListener(e -> callback.onFailure(buildErrorMessage(e)));
+                            checkReceivedPendingRequest(userId, otherId, callback);
+                        }
+
+                        @Override
+                        public void onFailure(String errorMessage) {
+                            callback.onFailure(errorMessage);
+                        }
+                    });
                 })
                 .addOnFailureListener(e -> callback.onFailure(buildErrorMessage(e)));
+    }
+
+    private void checkSentPendingRequest(String userId, String otherId, StatusCallback callback) {
+        db.collection(Constants.COLLECTION_FRIEND_REQUESTS)
+                .whereEqualTo("senderId", userId)
+                .get()
+                .addOnSuccessListener(snapshot -> {
+                    for (DocumentSnapshot doc : snapshot.getDocuments()) {
+                        FriendRequest request = doc.toObject(FriendRequest.class);
+                        if (request != null
+                                && otherId.equals(request.getReceiverId())
+                                && isPending(request.getStatus())) {
+                            callback.onSuccess("pending");
+                            return;
+                        }
+                    }
+                    callback.onSuccess("none");
+                })
+                .addOnFailureListener(e -> callback.onFailure(buildErrorMessage(e)));
+    }
+
+    private void checkReceivedPendingRequest(String userId, String otherId, StatusCallback callback) {
+        db.collection(Constants.COLLECTION_FRIEND_REQUESTS)
+                .whereEqualTo("senderId", otherId)
+                .get()
+                .addOnSuccessListener(snapshot -> {
+                    for (DocumentSnapshot doc : snapshot.getDocuments()) {
+                        FriendRequest request = doc.toObject(FriendRequest.class);
+                        if (request != null
+                                && userId.equals(request.getReceiverId())
+                                && isPending(request.getStatus())) {
+                            callback.onSuccess("received_pending");
+                            return;
+                        }
+                    }
+                    callback.onSuccess("none");
+                })
+                .addOnFailureListener(e -> callback.onFailure(buildErrorMessage(e)));
+    }
+
+    private void sortRequestsByNewest(List<FriendRequest> requests) {
+        requests.sort((left, right) -> {
+            if (left.getCreatedAt() == null && right.getCreatedAt() == null) return 0;
+            if (left.getCreatedAt() == null) return 1;
+            if (right.getCreatedAt() == null) return -1;
+            return right.getCreatedAt().compareTo(left.getCreatedAt());
+        });
+    }
+
+    private boolean isPending(String status) {
+        return status != null && "pending".equalsIgnoreCase(status.trim());
+    }
+
+    private boolean isEmpty(String value) {
+        return value == null || value.trim().isEmpty();
     }
 
     private String buildUserDisplayName(User user) {
@@ -405,16 +481,15 @@ public class FriendRepository {
         String fullName = user.getFullName();
         String username = user.getUsername();
 
-        if (fullName != null && !fullName.trim().isEmpty()
-                && username != null && !username.trim().isEmpty()) {
+        if (!isEmpty(fullName) && !isEmpty(username)) {
             return fullName + " (@" + username + ")";
         }
 
-        if (fullName != null && !fullName.trim().isEmpty()) {
+        if (!isEmpty(fullName)) {
             return fullName;
         }
 
-        if (username != null && !username.trim().isEmpty()) {
+        if (!isEmpty(username)) {
             return "@" + username;
         }
 
