@@ -216,7 +216,6 @@ public class MomentDetailActivity extends AppCompatActivity {
             @Override
             public void onSuccess() {
                 btnReportMoment.setEnabled(true);
-                Toast.makeText(MomentDetailActivity.this, "Đã gửi báo cáo cho Admin", Toast.LENGTH_SHORT).show();
             }
 
             @Override
@@ -275,7 +274,6 @@ public class MomentDetailActivity extends AppCompatActivity {
                 public void onSuccess() {
                     selectedReaction = reactionEmoji;
                     txtSelectedReaction.setText("Your reaction: " + selectedReaction);
-                    Toast.makeText(MomentDetailActivity.this, isChangingReaction ? "Đã đổi cảm xúc" : "Đã thả cảm xúc", Toast.LENGTH_SHORT).show();
 
                     loadReactions();
                     sendReactionNotification(reactionEmoji);
@@ -289,27 +287,41 @@ public class MomentDetailActivity extends AppCompatActivity {
         });
     }
     private void sendReactionNotification(String reactionEmoji) {
-        if (currentSenderId == null || currentSenderId.isEmpty()) return;
-        if (currentUserId == null || currentUserId.equals(currentSenderId)) return;
+        if (currentMomentId == null || currentMomentId.trim().isEmpty()) return;
+        if (currentUserId == null || currentUserId.trim().isEmpty()) return;
 
         FirebaseFirestore db = FirebaseFirestore.getInstance();
 
-        String notificationId = db.collection("notifications")
-                .document()
-                .getId();
+        db.collection("moments")
+                .document(currentMomentId)
+                .get()
+                .addOnSuccessListener(document -> {
+                    if (!document.exists()) return;
 
-        NotificationModel notification = new NotificationModel();
-        notification.setNotificationId(notificationId);
-        notification.setUserId(currentSenderId);
-        notification.setType("reaction");
-        notification.setTitle("Reaction mới");
-        notification.setMessage("Có người đã thả " + reactionEmoji + " vào khoảnh khắc của bạn.");
-        notification.setRead(false);
-        notification.setCreatedAt(Timestamp.now());
+                    String realSenderId = document.getString("senderId");
 
-        db.collection("notifications")
-                .document(notificationId)
-                .set(notification);
+                    if (realSenderId == null || realSenderId.trim().isEmpty()) return;
+
+                    // Không gửi thông báo nếu tự react bài của mình
+                    if (realSenderId.equals(currentUserId)) return;
+
+                    String notificationId = db.collection("notifications")
+                            .document()
+                            .getId();
+
+                    NotificationModel notification = new NotificationModel();
+                    notification.setNotificationId(notificationId);
+                    notification.setUserId(realSenderId);
+                    notification.setType("reaction");
+                    notification.setTitle("Reaction mới");
+                    notification.setMessage("Có người đã thả " + reactionEmoji + " vào khoảnh khắc của bạn.");
+                    notification.setRead(false);
+                    notification.setCreatedAt(Timestamp.now());
+
+                    db.collection("notifications")
+                            .document(notificationId)
+                            .set(notification);
+                });
     }
 
     private void loadMyReaction() {
