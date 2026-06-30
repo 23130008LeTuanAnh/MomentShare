@@ -1,7 +1,23 @@
+<?xml version="1.0" encoding="utf-8"?>
 <resources xmlns:tools="http://schemas.android.com/tools">
-    <!-- Base application theme. -->
+
+    <!-- Giữ giao diện sáng để tránh lỗi màn hình bị đen khi demo. -->
     <style name="Base.Theme.MomentShare" parent="Theme.Material3.DayNight.NoActionBar">
-        <!-- Customize your dark theme here. -->
-        <!-- <item name="colorPrimary">@color/my_dark_primary</item> -->
+        <item name="colorPrimary">@color/ms_primary</item>
+        <item name="colorPrimaryDark">@color/ms_primary_dark</item>
+        <item name="colorSecondary">@color/ms_primary_light</item>
+        <item name="colorAccent">@color/ms_primary</item>
+
+        <item name="android:windowBackground">@color/ms_screen</item>
+        <item name="android:statusBarColor">@color/ms_screen</item>
+        <item name="android:navigationBarColor">@color/ms_surface</item>
+        <item name="android:windowLightStatusBar">true</item>
+        <item name="android:windowLightNavigationBar">true</item>
+        <item name="android:forceDarkAllowed">false</item>
+
+        <item name="materialButtonStyle">@style/Widget.MomentShare.Button</item>
+        <item name="textInputStyle">@style/Widget.MomentShare.TextInputLayout</item>
+        <item name="materialCardViewStyle">@style/Widget.MomentShare.Card</item>
     </style>
+
 </resources>
