@@ -17,6 +17,7 @@ import com.example.momentshare.model.User;
 import com.example.momentshare.repository.AuthManager;
 import com.example.momentshare.repository.FriendRepository;
 import com.example.momentshare.repository.MomentRepository;
+import com.example.momentshare.repository.NotificationRepository;
 import com.example.momentshare.repository.UserRepository;
 import com.example.momentshare.util.Constants;
 import com.example.momentshare.util.ValidationUtils;
@@ -63,6 +64,7 @@ public class ProfileActivity extends AppCompatActivity {
     private AuthManager authManager;
     private UserRepository userRepository;
     private MomentRepository momentRepository; // Người 1 thực hiện: repository dùng để đếm ảnh gửi/nhận thật trên Profile.
+    private NotificationRepository notificationRepository; // Người 5 thực hiện: repository dùng để đếm thông báo chưa đọc.
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -77,6 +79,9 @@ public class ProfileActivity extends AppCompatActivity {
 
         // Người 1 thực hiện: MomentRepository dùng để đếm số ảnh đã gửi/đã nhận thật trên Firestore.
         momentRepository = new MomentRepository(this);
+
+        // Người 5 thực hiện: NotificationRepository dùng để hiển thị số thông báo chưa đọc trên nút Thông báo.
+        notificationRepository = new NotificationRepository();
 
         initViews();
         setupEvents();
@@ -181,6 +186,7 @@ public class ProfileActivity extends AppCompatActivity {
         }
 
         showLoadingText();
+        loadBadgeCounts(currentUserId);
 
         userRepository.getUserById(currentUserId, new UserRepository.UserCallback() {
             @Override
@@ -249,6 +255,8 @@ public class ProfileActivity extends AppCompatActivity {
             txtFriendCount.setText("0 bạn bè");
             txtSentCount.setText("0 ảnh đã gửi");
             txtReceivedCount.setText("0 ảnh đã nhận");
+            btnNotification.setText("Thông báo");
+            btnFriendRequests.setText("Lời mời kết bạn");
             return;
         }
 
@@ -291,6 +299,46 @@ public class ProfileActivity extends AppCompatActivity {
         });
     }
 
+
+    /**
+     * Người 5 thực hiện: hiển thị số lượng thông báo chưa đọc và lời mời kết bạn đang chờ.
+     *
+     * Kết quả hiển thị trực tiếp trên nút để user nhìn thấy số lượng mới:
+     * - Thông báo (3)
+     * - Lời mời kết bạn (2)
+     */
+    private void loadBadgeCounts(String userId) {
+        if (ValidationUtils.isEmpty(userId)) {
+            btnNotification.setText("Thông báo");
+            btnFriendRequests.setText("Lời mời kết bạn");
+            return;
+        }
+
+        notificationRepository.countUnreadNotifications(userId, new NotificationRepository.CountCallback() {
+            @Override
+            public void onSuccess(int count) {
+                btnNotification.setText(count > 0 ? "Thông báo (" + count + ")" : "Thông báo");
+            }
+
+            @Override
+            public void onFailure(String errorMessage) {
+                btnNotification.setText("Thông báo");
+            }
+        });
+
+        new FriendRepository().countPendingRequests(userId, new FriendRepository.CountCallback() {
+            @Override
+            public void onSuccess(int count) {
+                btnFriendRequests.setText(count > 0 ? "Lời mời kết bạn (" + count + ")" : "Lời mời kết bạn");
+            }
+
+            @Override
+            public void onFailure(String errorMessage) {
+                btnFriendRequests.setText("Lời mời kết bạn");
+            }
+        });
+    }
+
     /**
      * Hiển thị trạng thái đang tải hồ sơ.
      */
@@ -304,6 +352,8 @@ public class ProfileActivity extends AppCompatActivity {
         txtFriendCount.setText("0 bạn bè");
         txtSentCount.setText("0 ảnh đã gửi");
         txtReceivedCount.setText("0 ảnh đã nhận");
+        btnNotification.setText("Thông báo");
+        btnFriendRequests.setText("Lời mời kết bạn");
 
         // Người 5 thêm: ẩn nút admin trong lúc chưa xác định được quyền của tài khoản.
         btnAdminDashboard.setVisibility(View.GONE);
