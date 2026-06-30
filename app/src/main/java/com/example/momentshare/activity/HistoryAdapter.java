@@ -4,17 +4,24 @@ import android.view.LayoutInflater;
 import android.view.View;
 import android.view.ViewGroup;
 import android.widget.ImageView;
+import android.widget.TextView;
+
 import androidx.annotation.NonNull;
 import androidx.recyclerview.widget.RecyclerView;
+
 import com.bumptech.glide.Glide;
 import com.example.momentshare.R;
 import com.example.momentshare.model.Moment;
+
+import java.text.SimpleDateFormat;
 import java.util.List;
+import java.util.Locale;
 
 public class HistoryAdapter extends RecyclerView.Adapter<HistoryAdapter.HistoryViewHolder> {
 
-    private List<Moment> historyList;
-    private OnItemClickListener listener;
+    private final List<Moment> historyList;
+    private final OnItemClickListener listener;
+    private final SimpleDateFormat dateFormat = new SimpleDateFormat("dd/MM/yyyy HH:mm", Locale.getDefault());
 
     public interface OnItemClickListener {
         void onItemClick(Moment moment);
@@ -37,36 +44,46 @@ public class HistoryAdapter extends RecyclerView.Adapter<HistoryAdapter.HistoryV
     public void onBindViewHolder(@NonNull HistoryViewHolder holder, int position) {
         Moment moment = historyList.get(position);
 
-        // Xử lý nạp ảnh an toàn, có ảnh giữ chỗ (placeholder) để View không bị sập chiều cao
-        if (moment.getImageUrl() != null && !moment.getImageUrl().isEmpty()) {
+        if (moment.getImageUrl() != null && !moment.getImageUrl().trim().isEmpty()) {
             Glide.with(holder.itemView.getContext())
                     .load(moment.getImageUrl())
-                    .placeholder(R.drawable.ic_launcher_background)
-                    .error(R.drawable.ic_launcher_background)
                     .centerCrop()
+                    .placeholder(R.mipmap.ic_launcher)
+                    .error(R.mipmap.ic_launcher)
                     .into(holder.imgHistoryMoment);
         } else {
-            holder.imgHistoryMoment.setImageResource(R.drawable.ic_launcher_background);
+            holder.imgHistoryMoment.setImageResource(R.mipmap.ic_launcher);
+        }
+
+        String caption = moment.getCaption() == null ? "" : moment.getCaption().trim();
+        holder.txtHistoryCaption.setText(caption.isEmpty() ? "Không có caption" : caption);
+
+        if (moment.getCreatedAt() != null) {
+            holder.txtHistoryDate.setText(dateFormat.format(moment.getCreatedAt().toDate()));
+        } else {
+            holder.txtHistoryDate.setText("Không rõ thời gian");
         }
 
         holder.itemView.setOnClickListener(v -> {
-            if (listener != null) {
-                listener.onItemClick(moment);
-            }
+            if (listener != null) listener.onItemClick(moment);
         });
     }
 
     @Override
     public int getItemCount() {
-        return historyList != null ? historyList.size() : 0;
+        return historyList == null ? 0 : historyList.size();
     }
 
     public static class HistoryViewHolder extends RecyclerView.ViewHolder {
         ImageView imgHistoryMoment;
+        TextView txtHistoryCaption;
+        TextView txtHistoryDate;
 
         public HistoryViewHolder(@NonNull View itemView) {
             super(itemView);
             imgHistoryMoment = itemView.findViewById(R.id.imgHistoryMoment);
+            txtHistoryCaption = itemView.findViewById(R.id.txtHistoryCaption);
+            txtHistoryDate = itemView.findViewById(R.id.txtHistoryDate);
         }
     }
 }

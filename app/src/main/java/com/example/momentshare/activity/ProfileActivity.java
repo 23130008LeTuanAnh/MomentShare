@@ -43,7 +43,7 @@ public class ProfileActivity extends AppCompatActivity {
      * Bật true để test xem app đọc được role/status gì từ Firestore.
      * Sau khi test xong có thể đổi thành false để không hiện Toast debug nữa.
      */
-    private static final boolean DEBUG_ADMIN_ROLE = true;
+    private static final boolean DEBUG_ADMIN_ROLE = false;
 
     private ImageView imgAvatar;
 
@@ -60,6 +60,7 @@ public class ProfileActivity extends AppCompatActivity {
     private Button btnEditProfile;
     private Button btnHomeFeed;
     private Button btnNotification;
+    private Button btnHistory;
     private Button btnFriendList;
     private Button btnFriendRequests;
     private Button btnAdminDashboard;
@@ -115,6 +116,7 @@ public class ProfileActivity extends AppCompatActivity {
         btnEditProfile = findViewById(R.id.btnEditProfile);
         btnHomeFeed = findViewById(R.id.btnHomeFeed);
         btnNotification = findViewById(R.id.btnNotification);
+        btnHistory = findViewById(R.id.btnHistory);
         btnFriendList = findViewById(R.id.btnFriendList);
         btnFriendRequests = findViewById(R.id.btnFriendRequests);
         btnAdminDashboard = findViewById(R.id.btnAdminDashboard);
@@ -138,6 +140,11 @@ public class ProfileActivity extends AppCompatActivity {
 
         btnNotification.setOnClickListener(v -> {
             Intent intent = new Intent(ProfileActivity.this, NotificationActivity.class);
+            startActivity(intent);
+        });
+
+        btnHistory.setOnClickListener(v -> {
+            Intent intent = new Intent(ProfileActivity.this, HistoryActivity.class);
             startActivity(intent);
         });
 
