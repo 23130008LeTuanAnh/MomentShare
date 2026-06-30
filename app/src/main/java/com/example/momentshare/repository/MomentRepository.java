@@ -23,8 +23,10 @@ import com.google.firebase.firestore.WriteBatch;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.HashSet;
+import java.util.HashMap;
 import java.util.LinkedHashSet;
 import java.util.List;
+import java.util.Map;
 import java.util.Set;
 import com.google.android.gms.tasks.Task;
 import com.google.android.gms.tasks.Tasks;
@@ -220,56 +222,74 @@ public class MomentRepository {
         });
     }
 
-    public void sendMoment(@NonNull String senderId, @NonNull Uri imageUri, @NonNull String caption,
-                           @Nullable List<String> receiverIds, @NonNull SendMomentCallback callback) {
+    public void sendMoment(@NonNull String senderId,
+                           @NonNull Uri imageUri,
+                           @NonNull String caption,
+                           @Nullable List<String> receiverIds,
+                           @NonNull SendMomentCallback callback) {
 
         uploadImageHelper.uploadMomentImage(senderId, imageUri, new UploadImageHelper.UploadCallback() {
             @Override
             public void onSuccess(@NonNull String imageUrl) {
-                // Xác định xem bài đăng có phải công khai hay không
-                boolean isPublic = (receiverIds == null || receiverIds.isEmpty());
-
-                Moment moment = new Moment();
-                moment.setSenderId(senderId);
-                moment.setImageUrl(imageUrl);
-                moment.setCaption(caption);
-                moment.setCreatedAt(Timestamp.now());
-                moment.setStatus(STATUS_ACTIVE);
+                // Người 5 thực hiện: sau khi upload ảnh qua API ImgBB thành công,
+                // lưu moment vào Firestore kèm isPublic trong cùng một lần set.
+                // Không dùng batch.update() ngay sau batch.set() trên cùng document để tránh lỗi commit batch.
+                boolean isPublic = receiverIds == null || receiverIds.isEmpty();
 
                 DocumentReference momentRef = db.collection(COLLECTION_MOMENTS).document();
                 String momentId = momentRef.getId();
-                moment.setMomentId(momentId);
+
+                Map<String, Object> momentData = new HashMap<>();
+                momentData.put("momentId", momentId);
+                momentData.put("senderId", senderId);
+                momentData.put("imageUrl", imageUrl);
+                momentData.put("caption", caption == null ? "" : caption.trim());
+                momentData.put("createdAt", Timestamp.now());
+                momentData.put("status", STATUS_ACTIVE);
+                momentData.put("isPublic", isPublic);
 
                 WriteBatch batch = db.batch();
-                // Đưa thông tin object moment vào
-                batch.set(momentRef, moment);
-                // Bổ sung thuộc tính isPublic trực tiếp vào Document Firestore
-                batch.update(momentRef, "isPublic", isPublic);
+                batch.set(momentRef, momentData);
 
-                // Nếu KHÔNG PHẢI công khai (tức là có chọn bạn bè) thì mới lưu vào bảng trung gian
                 if (!isPublic) {
                     for (String receiverId : receiverIds) {
+                        if (receiverId == null || receiverId.trim().isEmpty()) {
+                            continue;
+                        }
+
                         DocumentReference receiverRef = db.collection(COLLECTION_MOMENT_RECEIVERS).document();
-                        MomentReceiver mr = new MomentReceiver(
-                                receiverRef.getId(),
-                                momentId,
-                                receiverId,
-                                false,
-                                null
-                        );
-                        batch.set(receiverRef, mr);
+                        MomentReceiver receiver = new MomentReceiver();
+                        receiver.setId(receiverRef.getId());
+                        receiver.setMomentId(momentId);
+                        receiver.setReceiverId(receiverId);
+                        receiver.setViewed(false);
+                        receiver.setViewedAt(null);
+                        batch.set(receiverRef, receiver);
+
+                        // Người 5 thực hiện: tạo notification trong app cho người nhận ảnh.
+                        DocumentReference notificationRef = db.collection(COLLECTION_NOTIFICATIONS).document();
+                        NotificationModel notification = new NotificationModel();
+                        notification.setNotificationId(notificationRef.getId());
+                        notification.setUserId(receiverId);
+                        notification.setType("moment");
+                        notification.setTitle("Khoảnh khắc mới");
+                        notification.setMessage("Bạn vừa nhận được một khoảnh khắc mới.");
+                        notification.setRead(false);
+                        notification.setCreatedAt(Timestamp.now());
+                        batch.set(notificationRef, notification);
                     }
                 }
 
-                // Thực thi commit dữ liệu lên Firebase
                 batch.commit()
-                        .addOnSuccessListener(aVoid -> callback.onSuccess(momentId))
-                        .addOnFailureListener(e -> callback.onFailure(e.getMessage()));
+                        .addOnSuccessListener(unused -> callback.onSuccess(momentId))
+                        .addOnFailureListener(e ->
+                                callback.onFailure("Upload ảnh thành công nhưng lưu Firestore thất bại: "
+                                        + e.getMessage()));
             }
 
             @Override
             public void onFailure(@NonNull String errorMessage) {
-                callback.onFailure(errorMessage);
+                callback.onFailure("Upload ảnh qua API thất bại: " + errorMessage);
             }
         });
     }
