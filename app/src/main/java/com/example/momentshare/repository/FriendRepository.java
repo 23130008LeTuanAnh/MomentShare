@@ -217,6 +217,11 @@ public class FriendRepository {
     }
 
     public void getPendingRequests(String userId, RequestListCallback callback) {
+        if (isEmpty(userId)) {
+            callback.onSuccess(new ArrayList<>());
+            return;
+        }
+
         db.collection(Constants.COLLECTION_FRIEND_REQUESTS)
                 .whereEqualTo("receiverId", userId)
                 .get()
@@ -230,16 +235,16 @@ public class FriendRepository {
                             request.setRequestId(doc.getId());
                         }
 
+                        // Lọc những yêu cầu đang ở trạng thái pending
                         String status = safeString(request.getStatus());
                         if ("pending".equalsIgnoreCase(status)) {
                             requests.add(request);
                         }
                     }
 
+                    // Sắp xếp theo thời gian mới nhất bằng Java Code
                     requests.sort((left, right) -> {
-                        if (left.getCreatedAt() == null && right.getCreatedAt() == null) return 0;
-                        if (left.getCreatedAt() == null) return 1;
-                        if (right.getCreatedAt() == null) return -1;
+                        if (left.getCreatedAt() == null || right.getCreatedAt() == null) return 0;
                         return right.getCreatedAt().compareTo(left.getCreatedAt());
                     });
 
