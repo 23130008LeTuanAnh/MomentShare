@@ -15,6 +15,8 @@ public class Constants {
     public static final String COLLECTION_REACTIONS = "reactions";
     public static final String COLLECTION_NOTIFICATIONS = "notifications";
     public static final String COLLECTION_REPORTS = "reports";
+    public static final String COLLECTION_CHAT_ROOMS = "chat_rooms";
+    public static final String COLLECTION_MESSAGES = "messages";
 
     public static final String ROLE_USER = "USER";
     public static final String ROLE_ADMIN = "ADMIN";
@@ -34,6 +36,7 @@ public class Constants {
     public static final String NOTIFICATION_TYPE_FRIEND_REQUEST = "friend_request";
     public static final String NOTIFICATION_TYPE_REACTION = "reaction";
     public static final String NOTIFICATION_TYPE_REPORT = "report";
+    public static final String NOTIFICATION_TYPE_MESSAGE = "message";
 
     public static final String DEFAULT_AVATAR_URL = "";
 
