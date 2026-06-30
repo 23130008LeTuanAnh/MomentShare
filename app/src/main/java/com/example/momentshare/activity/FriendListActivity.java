@@ -3,6 +3,7 @@ package com.example.momentshare.activity;
 import android.content.Intent;
 import android.os.Bundle;
 import android.view.View;
+import android.widget.EditText;
 import android.widget.ImageButton;
 import android.widget.ProgressBar;
 import android.widget.TextView;
@@ -17,18 +18,28 @@ import com.example.momentshare.model.User;
 import com.example.momentshare.repository.FriendRepository;
 import com.google.firebase.auth.FirebaseAuth;
 
+import java.text.Normalizer;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Locale;
+import java.util.regex.Pattern;
 
 public class FriendListActivity extends AppCompatActivity {
 
-    private ImageButton btnBack, btnAdd;
+    private static final Pattern DIACRITICS_PATTERN = Pattern.compile("\\p{InCombiningDiacriticalMarks}+");
+
+    private ImageButton btnBack;
+    private ImageButton btnAdd;
+    private ImageButton btnRefresh;
     private ProgressBar progressBar;
     private TextView txtNoFriend;
+    private TextView txtFriendCount;
+    private EditText edtSearchFriendList;
     private RecyclerView rvFriendList;
 
     private FriendAdapter adapter;
-    private final List<User> friendList = new ArrayList<>();
+    private final List<User> allFriends = new ArrayList<>();
+    private final List<User> displayedFriends = new ArrayList<>();
     private FriendRepository friendRepository;
     private String currentUserId;
 
@@ -37,10 +48,12 @@ public class FriendListActivity extends AppCompatActivity {
         super.onCreate(savedInstanceState);
         setContentView(R.layout.activity_friend_list);
 
-        currentUserId = FirebaseAuth.getInstance().getCurrentUser() != null ?
-                FirebaseAuth.getInstance().getCurrentUser().getUid() : "";
+        currentUserId = FirebaseAuth.getInstance().getCurrentUser() != null
+                ? FirebaseAuth.getInstance().getCurrentUser().getUid()
+                : "";
 
         if (currentUserId.isEmpty()) {
+            Toast.makeText(this, "Bạn cần đăng nhập để xem danh sách bạn bè", Toast.LENGTH_SHORT).show();
             finish();
             return;
         }
@@ -59,18 +72,41 @@ public class FriendListActivity extends AppCompatActivity {
     private void initViews() {
         btnBack = findViewById(R.id.btnBackFriendList);
         btnAdd = findViewById(R.id.btnAddFriend);
+        btnRefresh = findViewById(R.id.btnRefreshFriendList);
         progressBar = findViewById(R.id.progressBarFriendList);
         txtNoFriend = findViewById(R.id.txtNoFriend);
+        txtFriendCount = findViewById(R.id.txtFriendCount);
+        edtSearchFriendList = findViewById(R.id.edtSearchFriendList);
         rvFriendList = findViewById(R.id.rvFriendList);
 
         rvFriendList.setLayoutManager(new LinearLayoutManager(this));
-        adapter = new FriendAdapter(this, friendList, false);
+        adapter = new FriendAdapter(this, displayedFriends, false);
+        adapter.setOnFriendRemovedListener(removedUser -> {
+            removeUserFromList(allFriends, removedUser);
+            removeUserFromList(displayedFriends, removedUser);
+            adapter.notifyDataSetChanged();
+            updateEmptyState();
+        });
         rvFriendList.setAdapter(adapter);
     }
 
     private void setupEvents() {
         btnBack.setOnClickListener(v -> finish());
         btnAdd.setOnClickListener(v -> startActivity(new Intent(this, SearchFriendActivity.class)));
+        btnRefresh.setOnClickListener(v -> loadFriendList());
+
+        edtSearchFriendList.addTextChangedListener(new android.text.TextWatcher() {
+            @Override
+            public void beforeTextChanged(CharSequence s, int start, int count, int after) { }
+
+            @Override
+            public void onTextChanged(CharSequence s, int start, int before, int count) {
+                filterFriendList(s == null ? "" : s.toString());
+            }
+
+            @Override
+            public void afterTextChanged(android.text.Editable s) { }
+        });
     }
 
     private void loadFriendList() {
@@ -79,28 +115,85 @@ public class FriendListActivity extends AppCompatActivity {
             @Override
             public void onSuccess(List<User> users) {
                 setLoading(false);
-                friendList.clear();
-                friendList.addAll(users);
-                adapter.notifyDataSetChanged();
-
-                if (users.isEmpty()) {
-                    txtNoFriend.setVisibility(View.VISIBLE);
-                } else {
-                    txtNoFriend.setVisibility(View.GONE);
-                }
+                allFriends.clear();
+                allFriends.addAll(users);
+                filterFriendList(edtSearchFriendList.getText().toString());
             }
 
             @Override
             public void onFailure(String errorMessage) {
                 setLoading(false);
                 Toast.makeText(FriendListActivity.this, "Lỗi: " + errorMessage, Toast.LENGTH_SHORT).show();
+                updateEmptyState();
             }
         });
     }
 
+    private void filterFriendList(String keyword) {
+        String normalizedKeyword = normalizeSearchText(keyword);
+        displayedFriends.clear();
+
+        if (normalizedKeyword.isEmpty()) {
+            displayedFriends.addAll(allFriends);
+        } else {
+            for (User user : allFriends) {
+                if (matchesKeyword(user, normalizedKeyword)) {
+                    displayedFriends.add(user);
+                }
+            }
+        }
+
+        adapter.notifyDataSetChanged();
+        updateEmptyState();
+    }
+
+    private boolean matchesKeyword(User user, String normalizedKeyword) {
+        if (user == null) return false;
+
+        String fullName = normalizeSearchText(user.getFullName());
+        String username = normalizeSearchText(user.getUsername());
+        String email = normalizeSearchText(user.getEmail());
+
+        return fullName.contains(normalizedKeyword)
+                || username.contains(normalizedKeyword)
+                || email.contains(normalizedKeyword);
+    }
+
+    private void updateEmptyState() {
+        String keyword = edtSearchFriendList == null ? "" : edtSearchFriendList.getText().toString().trim();
+
+        txtFriendCount.setText("Tổng: " + allFriends.size() + " bạn bè | Đang hiển thị: " + displayedFriends.size());
+        rvFriendList.setVisibility(displayedFriends.isEmpty() ? View.GONE : View.VISIBLE);
+        txtNoFriend.setVisibility(displayedFriends.isEmpty() ? View.VISIBLE : View.GONE);
+
+        if (allFriends.isEmpty()) {
+            txtNoFriend.setText("Bạn chưa có người bạn nào. Bấm nút + để tìm và kết bạn.");
+        } else if (!keyword.isEmpty()) {
+            txtNoFriend.setText("Không tìm thấy bạn bè phù hợp với từ khóa: " + keyword);
+        } else {
+            txtNoFriend.setText("Không có bạn bè để hiển thị");
+        }
+    }
+
     private void setLoading(boolean isLoading) {
         progressBar.setVisibility(isLoading ? View.VISIBLE : View.GONE);
-        rvFriendList.setVisibility(isLoading ? View.GONE : View.VISIBLE);
+        rvFriendList.setVisibility(isLoading ? View.GONE : rvFriendList.getVisibility());
         txtNoFriend.setVisibility(View.GONE);
+        btnAdd.setEnabled(!isLoading);
+        btnRefresh.setEnabled(!isLoading);
+    }
+
+    private void removeUserFromList(List<User> users, User removedUser) {
+        if (users == null || removedUser == null || removedUser.getUserId() == null) return;
+        users.removeIf(user -> user != null && removedUser.getUserId().equals(user.getUserId()));
+    }
+
+    private String normalizeSearchText(String value) {
+        if (value == null) return "";
+
+        String normalized = Normalizer.normalize(value.trim().toLowerCase(Locale.ROOT), Normalizer.Form.NFD);
+        normalized = DIACRITICS_PATTERN.matcher(normalized).replaceAll("");
+        normalized = normalized.replace('đ', 'd').replace('Đ', 'd');
+        return normalized;
     }
 }
