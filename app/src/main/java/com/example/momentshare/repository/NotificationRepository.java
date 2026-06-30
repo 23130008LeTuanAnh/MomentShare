@@ -17,6 +17,10 @@ import java.util.List;
 
 /**
  * NotificationRepository xử lý dữ liệu thông báo trong collection notifications.
+ *
+ * Đã chỉnh:
+ * - Thêm countUnreadNotifications() để ProfileActivity hiển thị số thông báo chưa đọc.
+ * - Đếm unread bằng Java sau khi query theo userId để tránh lỗi composite index.
  */
 public class NotificationRepository {
 
@@ -27,6 +31,11 @@ public class NotificationRepository {
 
     public interface ActionCallback {
         void onSuccess();
+        void onFailure(@NonNull String errorMessage);
+    }
+
+    public interface CountCallback {
+        void onSuccess(int count);
         void onFailure(@NonNull String errorMessage);
     }
 
@@ -68,6 +77,10 @@ public class NotificationRepository {
                     for (QueryDocumentSnapshot document : querySnapshot) {
                         NotificationModel notification = document.toObject(NotificationModel.class);
                         if (notification != null) {
+                            if (notification.getNotificationId() == null
+                                    || notification.getNotificationId().trim().isEmpty()) {
+                                notification.setNotificationId(document.getId());
+                            }
                             notifications.add(notification);
                         }
                     }
@@ -76,6 +89,30 @@ public class NotificationRepository {
                     callback.onSuccess(notifications);
                 })
                 .addOnFailureListener(e -> callback.onFailure("Không tải được thông báo: " + e.getMessage()));
+    }
+
+    /**
+     * Đếm số thông báo chưa đọc để hiển thị lên nút Thông báo.
+     */
+    public void countUnreadNotifications(@NonNull String userId,
+                                         @NonNull CountCallback callback) {
+        loadNotifications(userId, new NotificationListCallback() {
+            @Override
+            public void onSuccess(@NonNull List<NotificationModel> notifications) {
+                int count = 0;
+                for (NotificationModel notification : notifications) {
+                    if (notification != null && !notification.isRead()) {
+                        count++;
+                    }
+                }
+                callback.onSuccess(count);
+            }
+
+            @Override
+            public void onFailure(@NonNull String errorMessage) {
+                callback.onFailure(errorMessage);
+            }
+        });
     }
 
     public void markAsRead(@NonNull String notificationId,
