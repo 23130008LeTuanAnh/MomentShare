@@ -13,8 +13,10 @@ import android.widget.Toast;
 import androidx.appcompat.app.AppCompatActivity;
 
 import com.example.momentshare.R;
+import com.example.momentshare.model.Moment;
 import com.example.momentshare.model.NotificationModel;
 import com.example.momentshare.repository.AuthManager;
+import com.example.momentshare.repository.MomentRepository;
 import com.example.momentshare.repository.NotificationRepository;
 import com.example.momentshare.util.Constants;
 
@@ -22,11 +24,12 @@ import java.util.ArrayList;
 import java.util.List;
 
 /**
- * NotificationActivity hiển thị danh sách thông báo trong app cho người dùng hiện tại.
+ * NotificationActivity hiển thị thông báo trong app.
  *
  * Đã chỉnh:
- * - Bấm vào thông báo Lời mời kết bạn sẽ mở đúng FriendRequestActivity.
- * - Các thông báo khác chỉ đánh dấu đã đọc, không điều hướng sai sang màn hình ảnh.
+ * - Bấm thông báo friend_request mở đúng FriendRequestActivity.
+ * - Bấm notification reaction/moment có targetId sẽ mở MomentDetailActivity.
+ * - Vẫn điều hướng được kể cả notification đã đọc.
  */
 public class NotificationActivity extends AppCompatActivity {
 
@@ -37,6 +40,7 @@ public class NotificationActivity extends AppCompatActivity {
 
     private AuthManager authManager;
     private NotificationRepository notificationRepository;
+    private MomentRepository momentRepository;
 
     private final List<NotificationModel> notifications = new ArrayList<>();
     private ArrayAdapter<String> adapter;
@@ -49,14 +53,9 @@ public class NotificationActivity extends AppCompatActivity {
 
         authManager = new AuthManager();
         notificationRepository = new NotificationRepository();
+        momentRepository = new MomentRepository(this);
 
         initViews();
-        loadNotifications();
-    }
-
-    @Override
-    protected void onResume() {
-        super.onResume();
         loadNotifications();
     }
 
@@ -101,67 +100,80 @@ public class NotificationActivity extends AppCompatActivity {
 
     private void renderNotifications() {
         adapter.clear();
-
         for (NotificationModel notification : notifications) {
             String readPrefix = notification.isRead() ? "Đã đọc" : "Mới";
             adapter.add(readPrefix + " - " + safeText(notification.getTitle(), "Thông báo")
                     + "\n" + safeText(notification.getMessage(), "Không có nội dung"));
         }
-
         adapter.notifyDataSetChanged();
         txtEmptyNotifications.setVisibility(notifications.isEmpty() ? View.VISIBLE : View.GONE);
     }
 
-    /**
-     * Xử lý khi bấm vào từng thông báo.
-     *
-     * Lời mời kết bạn phải mở FriendRequestActivity để user chấp nhận/từ chối.
-     * Reaction hiện chưa lưu momentId trong NotificationModel nên không mở detail để tránh mở sai ảnh.
-     */
     private void handleNotificationClick(NotificationModel notification) {
-        markOneAsRead(notification, () -> {
-            if (Constants.NOTIFICATION_TYPE_FRIEND_REQUEST.equals(notification.getType())) {
-                Intent intent = new Intent(NotificationActivity.this, FriendRequestActivity.class);
-                startActivity(intent);
-                return;
-            }
+        if (notification == null) return;
 
-            Toast.makeText(NotificationActivity.this, "Đã đọc thông báo", Toast.LENGTH_SHORT).show();
-        });
+        if (!notification.isRead()) {
+            notificationRepository.markAsRead(notification.getNotificationId(), new NotificationRepository.ActionCallback() {
+                @Override
+                public void onSuccess() {
+                    notification.setRead(true);
+                    renderNotifications();
+                }
+
+                @Override
+                public void onFailure(String errorMessage) { }
+            });
+        }
+
+        navigateByNotification(notification);
     }
 
-    private void markOneAsRead(NotificationModel notification, Runnable afterMarked) {
-        if (notification == null || notification.getNotificationId() == null) {
+    private void navigateByNotification(NotificationModel notification) {
+        String type = safeText(notification.getType(), "");
+        String targetId = safeText(notification.getTargetId(), "");
+
+        if (Constants.NOTIFICATION_TYPE_FRIEND_REQUEST.equals(type)) {
+            Intent intent = new Intent(this, FriendRequestActivity.class);
+            if (!targetId.isEmpty()) {
+                intent.putExtra(FriendRequestActivity.EXTRA_FILTER_SENDER_ID, targetId);
+            }
+            startActivity(intent);
             return;
         }
 
-        if (notification.isRead()) {
-            afterMarked.run();
-            return;
+        if ((Constants.NOTIFICATION_TYPE_REACTION.equals(type)
+                || Constants.NOTIFICATION_TYPE_MOMENT.equals(type))
+                && !targetId.isEmpty()) {
+            openMomentDetail(targetId);
         }
+    }
 
+    private void openMomentDetail(String momentId) {
         setLoading(true);
-        notificationRepository.markAsRead(notification.getNotificationId(), new NotificationRepository.ActionCallback() {
+        momentRepository.getMomentById(momentId, new MomentRepository.MomentCallback() {
             @Override
-            public void onSuccess() {
+            public void onSuccess(Moment moment) {
                 setLoading(false);
-                notification.setRead(true);
-                renderNotifications();
-                afterMarked.run();
+                if (moment == null) {
+                    Toast.makeText(NotificationActivity.this, "Khoảnh khắc không còn tồn tại", Toast.LENGTH_SHORT).show();
+                    return;
+                }
+
+                Intent intent = new Intent(NotificationActivity.this, MomentDetailActivity.class);
+                HomeFeedActivity.putMomentExtras(intent, moment);
+                startActivity(intent);
             }
 
             @Override
-            public void onFailure(String errorMessage) {
+            public void onError(Exception exception) {
                 setLoading(false);
-                Toast.makeText(NotificationActivity.this, errorMessage, Toast.LENGTH_SHORT).show();
+                Toast.makeText(NotificationActivity.this, "Không mở được khoảnh khắc", Toast.LENGTH_SHORT).show();
             }
         });
     }
 
     private void markAllAsRead() {
-        if (currentUserId == null) {
-            return;
-        }
+        if (currentUserId == null) return;
 
         setLoading(true);
         notificationRepository.markAllAsRead(currentUserId, new NotificationRepository.ActionCallback() {

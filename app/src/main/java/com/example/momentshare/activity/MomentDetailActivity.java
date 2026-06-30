@@ -17,6 +17,7 @@ import androidx.recyclerview.widget.RecyclerView;
 
 import com.bumptech.glide.Glide;
 import com.example.momentshare.R;
+import com.example.momentshare.model.Moment;
 import com.example.momentshare.model.NotificationModel;
 import com.example.momentshare.model.Reaction;
 import com.example.momentshare.model.User;
@@ -38,8 +39,10 @@ import java.util.Locale;
  * MomentDetailActivity hiển thị chi tiết khoảnh khắc.
  *
  * Đã chỉnh:
- * - Không hiện Toast lỗi kỹ thuật FAILED_PRECONDITION khi tải reaction.
- * - Nếu reaction query lỗi do index/mạng, giao diện detail vẫn hiển thị ảnh bình thường.
+ * - Xóa Toast lỗi kỹ thuật FAILED_PRECONDITION khi tải reaction.
+ * - Không hiển thị Toast debug trên nền khi mở detail.
+ * - Khi thả tim/reaction, luôn đọc lại owner thật từ moments/{momentId} rồi mới tạo notification.
+ *   Nhờ vậy notification gửi cho người đăng khoảnh khắc, không gửi nhầm cho người thả reaction.
  */
 public class MomentDetailActivity extends AppCompatActivity {
 
@@ -56,16 +59,17 @@ public class MomentDetailActivity extends AppCompatActivity {
     private TextView txtDetailCaption;
     private TextView txtDetailTime;
     private TextView txtSelectedReaction;
-    private Button btnReportMoment; // Người 5 thực hiện: nút để user gửi báo cáo nội dung.
+    private Button btnReportMoment;
 
     private RecyclerView rvReactions;
     private ReactionAdapter reactionAdapter;
     private ReactionRepository reactionRepository;
-    private AdminRepository adminRepository; // Người 5 thực hiện: dùng để tạo report cho Admin xử lý.
+    private AdminRepository adminRepository;
     private UserRepository userRepository;
+    private MomentRepository momentRepository;
 
     private String currentMomentId = "";
-    private String currentSenderId = ""; // Người 5 thực hiện: lưu người gửi để không cho tự báo cáo ảnh của mình.
+    private String currentSenderId = "";
     private String currentUserId;
     private String selectedReaction = "";
 
@@ -80,7 +84,6 @@ public class MomentDetailActivity extends AppCompatActivity {
         }
 
         currentUserId = FirebaseAuth.getInstance().getCurrentUser().getUid();
-
         setContentView(R.layout.activity_moment_detail);
 
         currentMomentId = getIntent().getStringExtra(EXTRA_MOMENT_ID);
@@ -97,10 +100,12 @@ public class MomentDetailActivity extends AppCompatActivity {
         reactionRepository = new ReactionRepository();
         userRepository = new UserRepository();
         adminRepository = new AdminRepository();
+        momentRepository = new MomentRepository(this);
 
         btnBack.setOnClickListener(v -> finish());
 
-        showMomentData();
+        showMomentDataFromIntent();
+        refreshMomentOwnerFromFirestore();
 
         rvReactions.setLayoutManager(new LinearLayoutManager(this));
         reactionAdapter = new ReactionAdapter(new ArrayList<>());
@@ -122,7 +127,7 @@ public class MomentDetailActivity extends AppCompatActivity {
         markMomentAsViewed();
     }
 
-    private void showMomentData() {
+    private void showMomentDataFromIntent() {
         String senderId = getIntent().getStringExtra(EXTRA_SENDER_ID);
         currentSenderId = senderId == null ? "" : senderId;
 
@@ -130,25 +135,7 @@ public class MomentDetailActivity extends AppCompatActivity {
         String caption = getIntent().getStringExtra(EXTRA_CAPTION);
         long createdAt = getIntent().getLongExtra(EXTRA_CREATED_AT, 0L);
 
-        if (senderId == null || senderId.isEmpty()) {
-            txtDetailSender.setText("Unknown sender");
-        } else {
-            userRepository.getUserById(senderId, new UserRepository.UserCallback() {
-                @Override
-                public void onSuccess(User user) {
-                    String fullName = user == null ? "" : user.getFullName();
-                    txtDetailSender.setText(fullName == null || fullName.trim().isEmpty()
-                            ? "Unknown sender"
-                            : fullName);
-                }
-
-                @Override
-                public void onFailure(String errorMessage) {
-                    txtDetailSender.setText("Unknown sender");
-                }
-            });
-        }
-
+        bindSenderName(currentSenderId);
         txtDetailCaption.setText(caption == null || caption.isEmpty() ? "No caption" : caption);
         txtDetailTime.setText(createdAt == 0L ? "Just now" : formatTime(createdAt));
 
@@ -161,8 +148,60 @@ public class MomentDetailActivity extends AppCompatActivity {
     }
 
     /**
-     * Người 5 thực hiện: nối chức năng user tạo báo cáo nội dung từ màn hình chi tiết ảnh.
+     * Đọc lại moment từ Firestore để lấy senderId thật.
+     * Phần này sửa lỗi notification reaction gửi nhầm cho người thả reaction.
      */
+    private void refreshMomentOwnerFromFirestore() {
+        if (currentMomentId == null || currentMomentId.trim().isEmpty()) {
+            return;
+        }
+
+        momentRepository.getMomentById(currentMomentId, new MomentRepository.MomentCallback() {
+            @Override
+            public void onSuccess(Moment moment) {
+                if (moment == null) return;
+
+                if (moment.getSenderId() != null && !moment.getSenderId().trim().isEmpty()) {
+                    currentSenderId = moment.getSenderId();
+                    bindSenderName(currentSenderId);
+                }
+            }
+
+            @Override
+            public void onError(Exception exception) {
+                Log.w(TAG, "Không đọc lại được owner của moment.", exception);
+            }
+        });
+    }
+
+    private void bindSenderName(String senderId) {
+        if (senderId == null || senderId.trim().isEmpty()) {
+            txtDetailSender.setText("Unknown sender");
+            return;
+        }
+
+        userRepository.getUserById(senderId, new UserRepository.UserCallback() {
+            @Override
+            public void onSuccess(User user) {
+                String fullName = user == null ? "" : user.getFullName();
+                String username = user == null ? "" : user.getUsername();
+
+                if (fullName != null && !fullName.trim().isEmpty()) {
+                    txtDetailSender.setText(fullName);
+                } else if (username != null && !username.trim().isEmpty()) {
+                    txtDetailSender.setText("@" + username);
+                } else {
+                    txtDetailSender.setText("Người dùng MomentShare");
+                }
+            }
+
+            @Override
+            public void onFailure(String errorMessage) {
+                txtDetailSender.setText("Người dùng MomentShare");
+            }
+        });
+    }
+
     private void setupReportButton() {
         btnReportMoment.setOnClickListener(v -> {
             if (currentMomentId == null || currentMomentId.trim().isEmpty()) {
@@ -179,9 +218,6 @@ public class MomentDetailActivity extends AppCompatActivity {
         });
     }
 
-    /**
-     * Người 5 thực hiện: cho user chọn lý do báo cáo thay vì tạo report rỗng.
-     */
     private void showReportReasonDialog() {
         String[] reasons = {
                 "Nội dung phản cảm",
@@ -197,9 +233,6 @@ public class MomentDetailActivity extends AppCompatActivity {
                 .show();
     }
 
-    /**
-     * Người 5 thực hiện: lưu report vào collection reports để Admin xử lý trong ReportManagementActivity.
-     */
     private void submitReport(String reason) {
         btnReportMoment.setEnabled(false);
 
@@ -218,13 +251,6 @@ public class MomentDetailActivity extends AppCompatActivity {
         });
     }
 
-    /**
-     * Tải danh sách reaction.
-     *
-     * Đã chỉnh:
-     * - Không Toast lỗi kỹ thuật ra giao diện.
-     * - Khi lỗi Firestore index/mạng, chỉ để danh sách reaction trống và ghi Logcat.
-     */
     private void loadReactions() {
         reactionRepository.getReactionsForMoment(currentMomentId, new ReactionRepository.ReactionListCallback() {
             @Override
@@ -232,7 +258,6 @@ public class MomentDetailActivity extends AppCompatActivity {
                 reactionAdapter.updateData(reactions);
 
                 boolean hasReacted = false;
-
                 for (Reaction reaction : reactions) {
                     if (reaction.getUserId() != null && reaction.getUserId().equals(currentUserId)) {
                         selectedReaction = reaction.getEmoji() == null ? "" : reaction.getEmoji();
@@ -249,7 +274,8 @@ public class MomentDetailActivity extends AppCompatActivity {
 
             @Override
             public void onError(Exception e) {
-                Log.w(TAG, "Không tải được reactions, ẩn lỗi kỹ thuật khỏi UI.", e);
+                // Không đưa lỗi kỹ thuật FAILED_PRECONDITION lên UI detail.
+                Log.w(TAG, "Không tải được danh sách reaction.", e);
                 reactionAdapter.updateData(new ArrayList<>());
                 txtSelectedReaction.setText(selectedReaction.isEmpty()
                         ? "Your reaction: none"
@@ -260,7 +286,6 @@ public class MomentDetailActivity extends AppCompatActivity {
 
     private void setupReactionButton(int buttonId, String reactionEmoji) {
         View button = findViewById(buttonId);
-
         button.setOnClickListener(v -> {
             if (currentUserId.equals(currentSenderId)) {
                 Toast.makeText(
@@ -286,7 +311,7 @@ public class MomentDetailActivity extends AppCompatActivity {
                     ).show();
 
                     loadReactions();
-                    sendReactionNotification(reactionEmoji);
+                    sendReactionNotificationToMomentOwner(reactionEmoji);
                 }
 
                 @Override
@@ -297,28 +322,51 @@ public class MomentDetailActivity extends AppCompatActivity {
         });
     }
 
-    private void sendReactionNotification(String reactionEmoji) {
-        if (currentSenderId == null || currentSenderId.isEmpty()) return;
-        if (currentUserId == null || currentUserId.equals(currentSenderId)) return;
+    /**
+     * Luôn lấy owner thật từ Firestore trước khi tạo notification.
+     * Không dùng currentUserId làm người nhận notification.
+     */
+    private void sendReactionNotificationToMomentOwner(String reactionEmoji) {
+        if (currentMomentId == null || currentMomentId.trim().isEmpty()) return;
 
-        FirebaseFirestore db = FirebaseFirestore.getInstance();
+        momentRepository.getMomentById(currentMomentId, new MomentRepository.MomentCallback() {
+            @Override
+            public void onSuccess(Moment moment) {
+                if (moment == null || moment.getSenderId() == null || moment.getSenderId().trim().isEmpty()) {
+                    return;
+                }
 
-        String notificationId = db.collection("notifications")
-                .document()
-                .getId();
+                String ownerId = moment.getSenderId();
+                currentSenderId = ownerId;
 
-        NotificationModel notification = new NotificationModel();
-        notification.setNotificationId(notificationId);
-        notification.setUserId(currentSenderId);
-        notification.setType("reaction");
-        notification.setTitle("Reaction mới");
-        notification.setMessage("Có người đã thả " + reactionEmoji + " vào khoảnh khắc của bạn.");
-        notification.setRead(false);
-        notification.setCreatedAt(Timestamp.now());
+                if (ownerId.equals(currentUserId)) {
+                    return;
+                }
 
-        db.collection("notifications")
-                .document(notificationId)
-                .set(notification);
+                FirebaseFirestore db = FirebaseFirestore.getInstance();
+                String notificationId = db.collection("notifications").document().getId();
+
+                NotificationModel notification = new NotificationModel();
+                notification.setNotificationId(notificationId);
+                notification.setUserId(ownerId);
+                notification.setType("reaction");
+                notification.setTitle("Reaction mới");
+                notification.setMessage("Có người đã thả " + reactionEmoji + " vào khoảnh khắc của bạn.");
+                notification.setTargetId(currentMomentId);
+                notification.setRead(false);
+                notification.setCreatedAt(Timestamp.now());
+
+                db.collection("notifications")
+                        .document(notificationId)
+                        .set(notification)
+                        .addOnFailureListener(e -> Log.w(TAG, "Không tạo được notification reaction.", e));
+            }
+
+            @Override
+            public void onError(Exception exception) {
+                Log.w(TAG, "Không xác định được owner để gửi notification reaction.", exception);
+            }
+        });
     }
 
     private void loadMyReaction() {
@@ -326,17 +374,14 @@ public class MomentDetailActivity extends AppCompatActivity {
             @Override
             public void onSuccess(String emoji) {
                 selectedReaction = emoji == null ? "" : emoji;
-
-                if (selectedReaction.isEmpty()) {
-                    txtSelectedReaction.setText("Your reaction: none");
-                } else {
-                    txtSelectedReaction.setText("Your reaction: " + selectedReaction);
-                }
+                txtSelectedReaction.setText(selectedReaction.isEmpty()
+                        ? "Your reaction: none"
+                        : "Your reaction: " + selectedReaction);
             }
 
             @Override
             public void onError(Exception e) {
-                Log.w(TAG, "Không tải được reaction của user hiện tại, giữ giao diện ổn định.", e);
+                Log.w(TAG, "Không tải được reaction của user hiện tại.", e);
                 selectedReaction = "";
                 txtSelectedReaction.setText("Your reaction: none");
             }
@@ -348,7 +393,6 @@ public class MomentDetailActivity extends AppCompatActivity {
             return;
         }
 
-        MomentRepository momentRepository = new MomentRepository(this);
         momentRepository.markMomentAsViewed(
                 currentMomentId,
                 currentUserId,

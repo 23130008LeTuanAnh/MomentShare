@@ -22,12 +22,11 @@ import com.example.momentshare.repository.UserRepository;
 import java.util.List;
 
 /**
- * FriendRequestAdapter hiển thị danh sách lời mời kết bạn.
+ * FriendRequestAdapter hiển thị item lời mời kết bạn.
  *
  * Đã chỉnh:
- * - Hiển thị placeholder "Đang tải..." trước khi lấy được thông tin người gửi.
- * - Nếu không lấy được user, vẫn hiện fallback thay vì để dòng trắng.
- * - Dùng currentRequest theo vị trí hiện tại để tránh sai item khi RecyclerView thay đổi dữ liệu.
+ * - Không để item trắng khi chưa tải được user.
+ * - Chấp nhận/từ chối đúng item hiện tại của RecyclerView.
  */
 public class FriendRequestAdapter extends RecyclerView.Adapter<FriendRequestAdapter.RequestViewHolder> {
 
@@ -54,7 +53,6 @@ public class FriendRequestAdapter extends RecyclerView.Adapter<FriendRequestAdap
     public void onBindViewHolder(@NonNull RequestViewHolder holder, int position) {
         FriendRequest request = requestList.get(position);
 
-        // Tránh giao diện trắng trong lúc đang tải user từ Firestore.
         holder.txtName.setText("Đang tải...");
         holder.txtUsername.setText("");
         holder.imgAvatar.setImageResource(R.mipmap.ic_launcher);
@@ -65,19 +63,10 @@ public class FriendRequestAdapter extends RecyclerView.Adapter<FriendRequestAdap
                 String fullName = user == null ? "" : user.getFullName();
                 String username = user == null ? "" : user.getUsername();
 
-                if (fullName == null || fullName.trim().isEmpty()) {
-                    fullName = "Người dùng MomentShare";
-                }
-
-                if (username == null || username.trim().isEmpty()) {
-                    username = "unknown";
-                }
-
-                holder.txtName.setText(fullName);
-                holder.txtUsername.setText("@" + username);
+                holder.txtName.setText(safeText(fullName, "Người dùng MomentShare"));
+                holder.txtUsername.setText("@" + safeText(username, "unknown"));
 
                 String avatarUrl = user == null ? "" : user.getAvatarUrl();
-
                 if (avatarUrl != null && !avatarUrl.trim().isEmpty()) {
                     Glide.with(context)
                             .load(avatarUrl)
@@ -93,7 +82,7 @@ public class FriendRequestAdapter extends RecyclerView.Adapter<FriendRequestAdap
             @Override
             public void onFailure(String errorMessage) {
                 holder.txtName.setText("Người dùng MomentShare");
-                holder.txtUsername.setText("ID: " + safeText(request.getSenderId()));
+                holder.txtUsername.setText("ID: " + safeText(request.getSenderId(), "unknown"));
                 holder.imgAvatar.setImageResource(R.mipmap.ic_launcher);
             }
         });
@@ -103,7 +92,6 @@ public class FriendRequestAdapter extends RecyclerView.Adapter<FriendRequestAdap
             if (currentPos == RecyclerView.NO_POSITION) return;
 
             FriendRequest currentRequest = requestList.get(currentPos);
-
             friendRepository.acceptFriendRequest(
                     currentRequest.getRequestId(),
                     currentRequest.getSenderId(),
@@ -113,6 +101,7 @@ public class FriendRequestAdapter extends RecyclerView.Adapter<FriendRequestAdap
                         public void onSuccess() {
                             requestList.remove(currentPos);
                             notifyItemRemoved(currentPos);
+                            notifyItemRangeChanged(currentPos, requestList.size());
                             Toast.makeText(context, "Đã chấp nhận kết bạn", Toast.LENGTH_SHORT).show();
                         }
 
@@ -129,41 +118,36 @@ public class FriendRequestAdapter extends RecyclerView.Adapter<FriendRequestAdap
             if (currentPos == RecyclerView.NO_POSITION) return;
 
             FriendRequest currentRequest = requestList.get(currentPos);
+            friendRepository.rejectFriendRequest(currentRequest.getRequestId(), new FriendRepository.ActionCallback() {
+                @Override
+                public void onSuccess() {
+                    requestList.remove(currentPos);
+                    notifyItemRemoved(currentPos);
+                    notifyItemRangeChanged(currentPos, requestList.size());
+                    Toast.makeText(context, "Đã từ chối lời mời", Toast.LENGTH_SHORT).show();
+                }
 
-            friendRepository.rejectFriendRequest(
-                    currentRequest.getRequestId(),
-                    new FriendRepository.ActionCallback() {
-                        @Override
-                        public void onSuccess() {
-                            requestList.remove(currentPos);
-                            notifyItemRemoved(currentPos);
-                            Toast.makeText(context, "Đã từ chối lời mời", Toast.LENGTH_SHORT).show();
-                        }
-
-                        @Override
-                        public void onFailure(String errorMessage) {
-                            Toast.makeText(context, "Lỗi: " + errorMessage, Toast.LENGTH_SHORT).show();
-                        }
-                    }
-            );
+                @Override
+                public void onFailure(String errorMessage) {
+                    Toast.makeText(context, "Lỗi: " + errorMessage, Toast.LENGTH_SHORT).show();
+                }
+            });
         });
     }
 
     @Override
     public int getItemCount() {
-        return requestList.size();
+        return requestList == null ? 0 : requestList.size();
     }
 
-    private String safeText(String value) {
-        return value == null ? "" : value;
+    private String safeText(String value, String fallback) {
+        return value == null || value.trim().isEmpty() ? fallback : value.trim();
     }
 
     public static class RequestViewHolder extends RecyclerView.ViewHolder {
         ImageView imgAvatar;
-        TextView txtName;
-        TextView txtUsername;
-        ImageButton btnAccept;
-        ImageButton btnReject;
+        TextView txtName, txtUsername;
+        ImageButton btnAccept, btnReject;
 
         public RequestViewHolder(@NonNull View itemView) {
             super(itemView);

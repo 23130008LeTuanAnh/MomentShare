@@ -1,5 +1,6 @@
 package com.example.momentshare.activity;
 
+import android.app.AlertDialog;
 import android.os.Bundle;
 import android.view.View;
 import android.widget.ArrayAdapter;
@@ -8,7 +9,6 @@ import android.widget.ProgressBar;
 import android.widget.TextView;
 import android.widget.Toast;
 
-import androidx.appcompat.app.AlertDialog;
 import androidx.appcompat.app.AppCompatActivity;
 
 import com.example.momentshare.R;
@@ -23,13 +23,17 @@ import java.util.ArrayList;
 import java.util.List;
 
 /**
- * ReportManagementActivity hiển thị các báo cáo nội dung để Admin xử lý.
+ * ReportManagementActivity quản lý báo cáo nội dung cho Admin.
+ *
+ * Đã chỉnh:
+ * - Dialog xử lý report dùng nút rõ ràng: Ẩn khoảnh khắc, Bỏ qua, Hủy.
+ * - Tránh lỗi giao diện chỉ hiện nút Hủy mà không hiện lựa chọn xử lý.
  */
 public class ReportManagementActivity extends AppCompatActivity {
 
-    private ListView listReports;
     private TextView txtEmptyReports;
     private ProgressBar progressBar;
+    private ListView listReports;
 
     private AuthManager authManager;
     private UserRepository userRepository;
@@ -53,9 +57,9 @@ public class ReportManagementActivity extends AppCompatActivity {
     }
 
     private void initViews() {
-        listReports = findViewById(R.id.listReports);
         txtEmptyReports = findViewById(R.id.txtEmptyReports);
         progressBar = findViewById(R.id.progressBar);
+        listReports = findViewById(R.id.listReports);
 
         adapter = new ArrayAdapter<>(this, android.R.layout.simple_list_item_1, new ArrayList<>());
         listReports.setAdapter(adapter);
@@ -74,7 +78,7 @@ public class ReportManagementActivity extends AppCompatActivity {
             @Override
             public void onSuccess(User user) {
                 if (!Constants.ROLE_ADMIN.equals(user.getRole())) {
-                    Toast.makeText(ReportManagementActivity.this, "Bạn không có quyền quản lý báo cáo", Toast.LENGTH_SHORT).show();
+                    Toast.makeText(ReportManagementActivity.this, "Không có quyền Admin", Toast.LENGTH_SHORT).show();
                     finish();
                     return;
                 }
@@ -83,6 +87,7 @@ public class ReportManagementActivity extends AppCompatActivity {
 
             @Override
             public void onFailure(String errorMessage) {
+                setLoading(false);
                 Toast.makeText(ReportManagementActivity.this, errorMessage, Toast.LENGTH_SHORT).show();
                 finish();
             }
@@ -90,6 +95,7 @@ public class ReportManagementActivity extends AppCompatActivity {
     }
 
     private void loadReports() {
+        setLoading(true);
         adminRepository.loadReports(new AdminRepository.ReportsCallback() {
             @Override
             public void onSuccess(List<ReportModel> result) {
@@ -109,13 +115,11 @@ public class ReportManagementActivity extends AppCompatActivity {
 
     private void renderReports() {
         adapter.clear();
-
         for (ReportModel report : reports) {
             adapter.add("Lý do: " + safeText(report.getReason(), "Không có")
                     + "\nMoment: " + safeText(report.getMomentId(), "Không rõ")
                     + " - " + safeText(report.getStatus(), Constants.REPORT_STATUS_PENDING));
         }
-
         adapter.notifyDataSetChanged();
         txtEmptyReports.setVisibility(reports.isEmpty() ? View.VISIBLE : View.GONE);
     }
@@ -126,21 +130,12 @@ public class ReportManagementActivity extends AppCompatActivity {
             return;
         }
 
-        String[] actions = {
-                "Ẩn khoảnh khắc và đánh dấu đã xử lý",
-                "Bỏ qua báo cáo"
-        };
-
         new AlertDialog.Builder(this)
                 .setTitle("Xử lý báo cáo")
-                .setMessage("Moment ID: " + safeText(report.getMomentId(), "Không rõ"))
-                .setItems(actions, (dialog, which) -> {
-                    if (which == 0) {
-                        hideMomentAndResolveReport(report);
-                    } else {
-                        ignoreReport(report);
-                    }
-                })
+                .setMessage("Moment ID: " + safeText(report.getMomentId(), "Không rõ")
+                        + "\nLý do: " + safeText(report.getReason(), "Không có"))
+                .setPositiveButton("Ẩn khoảnh khắc", (dialog, which) -> hideMomentAndResolveReport(report))
+                .setNeutralButton("Bỏ qua", (dialog, which) -> ignoreReport(report))
                 .setNegativeButton("Hủy", null)
                 .show();
     }

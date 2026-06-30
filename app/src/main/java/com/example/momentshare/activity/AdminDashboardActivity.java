@@ -21,7 +21,9 @@ import com.example.momentshare.util.Constants;
 
 /**
  * AdminDashboardActivity là màn hình tổng quan cho quản trị viên.
- * Màn hình chỉ cho phép tài khoản có role ADMIN truy cập.
+ *
+ * Đã chỉnh:
+ * - Nút Quản lý báo cáo hiển thị số báo cáo đang chờ.
  */
 public class AdminDashboardActivity extends AppCompatActivity {
 
@@ -148,12 +150,16 @@ public class AdminDashboardActivity extends AppCompatActivity {
         txtTotalReports.setText(String.valueOf(statistics.getTotalReports()));
         txtPendingReports.setText(String.valueOf(statistics.getPendingReports()));
         txtLockedUsers.setText(String.valueOf(statistics.getLockedUsers()));
+
+        if (statistics.getPendingReports() > 0) {
+            btnManageReports.setText("Quản lý báo cáo (" + statistics.getPendingReports() + ")");
+        } else {
+            btnManageReports.setText("Quản lý báo cáo");
+        }
     }
 
     private void seedDemoData() {
-        if (currentUserId == null) {
-            return;
-        }
+        if (currentUserId == null) return;
 
         setLoading(true);
         testDataSeeder.seedAdminDemoData(currentUserId, new TestDataSeeder.SeedCallback() {

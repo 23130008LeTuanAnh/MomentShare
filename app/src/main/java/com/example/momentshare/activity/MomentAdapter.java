@@ -14,13 +14,20 @@ import com.bumptech.glide.Glide;
 import com.example.momentshare.R;
 import com.example.momentshare.model.Moment;
 import com.example.momentshare.model.User;
-import com.example.momentshare.repository.UserRepository;
 import com.example.momentshare.repository.ReactionRepository;
+import com.example.momentshare.repository.UserRepository;
 
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 
+/**
+ * MomentAdapter hiển thị item khoảnh khắc trên Home.
+ *
+ * Đã chỉnh:
+ * - Tải tên người đăng chắc hơn thông qua UserRepository fallback.
+ * - Tránh bind nhầm tên khi RecyclerView tái sử dụng ViewHolder.
+ */
 public class MomentAdapter extends RecyclerView.Adapter<MomentAdapter.MomentViewHolder> {
 
     private final Context context;
@@ -39,14 +46,15 @@ public class MomentAdapter extends RecyclerView.Adapter<MomentAdapter.MomentView
     @NonNull
     @Override
     public MomentViewHolder onCreateViewHolder(@NonNull ViewGroup parent, int viewType) {
-        View view = LayoutInflater.from(parent.getContext())
-                .inflate(R.layout.item_moment_feed, parent, false);
+        View view = LayoutInflater.from(parent.getContext()).inflate(R.layout.item_moment_feed, parent, false);
         return new MomentViewHolder(view);
     }
 
     @Override
     public void onBindViewHolder(@NonNull MomentViewHolder holder, int position) {
         Moment moment = momentList.get(position);
+        String senderId = moment.getSenderId() == null ? "" : moment.getSenderId();
+        holder.boundSenderId = senderId;
 
         holder.txtUsername.setText("Đang tải...");
         holder.txtCaption.setText(moment.getCaption() == null ? "" : moment.getCaption());
@@ -72,14 +80,14 @@ public class MomentAdapter extends RecyclerView.Adapter<MomentAdapter.MomentView
                     .load(moment.getImageUrl())
                     .placeholder(R.drawable.ic_launcher_background)
                     .into(holder.imgMoment);
+        } else {
+            holder.imgMoment.setImageResource(R.drawable.ic_launcher_background);
         }
 
-        loadSenderInfo(holder, moment.getSenderId());
+        loadSenderInfo(holder, senderId);
 
         holder.itemView.setOnClickListener(v -> {
-            if (listener != null) {
-                listener.onMomentClick(moment);
-            }
+            if (listener != null) listener.onMomentClick(moment);
         });
     }
 
@@ -90,7 +98,7 @@ public class MomentAdapter extends RecyclerView.Adapter<MomentAdapter.MomentView
         }
 
         if (userCache.containsKey(senderId)) {
-            bindSender(holder, userCache.get(senderId));
+            bindSender(holder, senderId, userCache.get(senderId));
             return;
         }
 
@@ -98,17 +106,23 @@ public class MomentAdapter extends RecyclerView.Adapter<MomentAdapter.MomentView
             @Override
             public void onSuccess(User user) {
                 userCache.put(senderId, user);
-                bindSender(holder, user);
+                bindSender(holder, senderId, user);
             }
 
             @Override
             public void onFailure(String errorMessage) {
-                holder.txtUsername.setText("Người dùng MomentShare");
+                if (senderId.equals(holder.boundSenderId)) {
+                    holder.txtUsername.setText("Người dùng MomentShare");
+                }
             }
         });
     }
 
-    private void bindSender(@NonNull MomentViewHolder holder, User user) {
+    private void bindSender(@NonNull MomentViewHolder holder, String senderId, User user) {
+        if (!senderId.equals(holder.boundSenderId)) {
+            return;
+        }
+
         if (user == null) {
             holder.txtUsername.setText("Người dùng MomentShare");
             return;
@@ -132,6 +146,8 @@ public class MomentAdapter extends RecyclerView.Adapter<MomentAdapter.MomentView
                     .error(R.mipmap.ic_launcher)
                     .circleCrop()
                     .into(holder.imgAvatar);
+        } else {
+            holder.imgAvatar.setImageResource(R.mipmap.ic_launcher);
         }
     }
 
@@ -152,6 +168,7 @@ public class MomentAdapter extends RecyclerView.Adapter<MomentAdapter.MomentView
     public static class MomentViewHolder extends RecyclerView.ViewHolder {
         ImageView imgAvatar, imgMoment, imgReactionIcon;
         TextView txtUsername, txtCaption, txtReactionCount;
+        String boundSenderId = "";
 
         public MomentViewHolder(@NonNull View itemView) {
             super(itemView);

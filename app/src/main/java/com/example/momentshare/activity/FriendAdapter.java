@@ -23,12 +23,11 @@ import com.google.firebase.auth.FirebaseAuth;
 import java.util.List;
 
 /**
- * FriendAdapter hiển thị user trong màn hình tìm bạn và danh sách bạn bè.
+ * FriendAdapter hiển thị user trong danh sách bạn bè và màn hình tìm kiếm bạn bè.
  *
  * Đã chỉnh:
- * - Reset listener/nút trong onBindViewHolder để RecyclerView không giữ trạng thái cũ.
- * - Khi trạng thái là received_pending, nút Phản hồi mở đúng FriendRequestActivity.
- * - Truyền senderId vào FriendRequestActivity để màn hình lời mời ưu tiên hiển thị đúng người vừa tìm kiếm.
+ * - Nút Phản hồi mở đúng FriendRequestActivity và truyền senderId để lọc đúng lời mời.
+ * - Không điều hướng nhầm sang detail ảnh.
  */
 public class FriendAdapter extends RecyclerView.Adapter<FriendAdapter.FriendViewHolder> {
 
@@ -59,15 +58,6 @@ public class FriendAdapter extends RecyclerView.Adapter<FriendAdapter.FriendView
     public void onBindViewHolder(@NonNull FriendViewHolder holder, int position) {
         User user = userList.get(position);
 
-        holder.itemView.setOnClickListener(null);
-        holder.btnAction.setOnClickListener(null);
-        holder.btnAction.setEnabled(false);
-        holder.btnAction.setVisibility(View.VISIBLE);
-        holder.btnAction.setText("Đang tải...");
-        holder.btnAction.setTextColor(Color.WHITE);
-        holder.btnAction.setBackgroundColor(Color.parseColor("#6F4DBF"));
-        holder.btnAction.setTag(user.getUserId());
-
         holder.txtName.setText(safeText(user.getFullName(), "Người dùng MomentShare"));
         holder.txtUsername.setText("@" + safeText(user.getUsername(), "unknown"));
 
@@ -83,101 +73,80 @@ public class FriendAdapter extends RecyclerView.Adapter<FriendAdapter.FriendView
         }
 
         if (isSearchMode) {
-            bindSearchMode(holder, user);
+            if (user.getUserId() == null || user.getUserId().equals(currentUserId)) {
+                holder.btnAction.setVisibility(View.GONE);
+            } else {
+                holder.btnAction.setVisibility(View.VISIBLE);
+                updateButtonState(holder.btnAction, user.getUserId());
+            }
         } else {
-            bindFriendListMode(holder, user);
-        }
-    }
-
-    private void bindSearchMode(@NonNull FriendViewHolder holder, @NonNull User user) {
-        holder.itemView.setOnClickListener(null);
-
-        if (user.getUserId() == null || user.getUserId().equals(currentUserId)) {
-            holder.btnAction.setVisibility(View.GONE);
-            return;
-        }
-
-        holder.btnAction.setVisibility(View.VISIBLE);
-        updateButtonState(holder.btnAction, user.getUserId());
-    }
-
-    private void bindFriendListMode(@NonNull FriendViewHolder holder, @NonNull User user) {
-        holder.itemView.setOnClickListener(v -> {
-            Intent intent = new Intent(context, FriendProfileActivity.class);
-            intent.putExtra(FriendProfileActivity.EXTRA_FRIEND_ID, user.getUserId());
-            context.startActivity(intent);
-        });
-
-        holder.btnAction.setText("Hủy kết bạn");
-        holder.btnAction.setEnabled(true);
-        holder.btnAction.setBackgroundColor(Color.RED);
-        holder.btnAction.setTextColor(Color.WHITE);
-
-        holder.btnAction.setOnClickListener(v -> {
-            int curPos = holder.getAdapterPosition();
-            if (curPos == RecyclerView.NO_POSITION) return;
-
-            User currentUser = userList.get(curPos);
-            friendRepository.unfriend(currentUserId, currentUser.getUserId(), new FriendRepository.ActionCallback() {
-                @Override
-                public void onSuccess() {
-                    userList.remove(curPos);
-                    notifyItemRemoved(curPos);
-                    notifyItemRangeChanged(curPos, userList.size());
-                }
-
-                @Override
-                public void onFailure(String errorMessage) {
-                    Toast.makeText(context, errorMessage, Toast.LENGTH_SHORT).show();
-                }
+            holder.itemView.setOnClickListener(v -> {
+                Intent intent = new Intent(context, FriendProfileActivity.class);
+                intent.putExtra(FriendProfileActivity.EXTRA_FRIEND_ID, user.getUserId());
+                context.startActivity(intent);
             });
-        });
+
+            holder.btnAction.setText("Hủy kết bạn");
+            holder.btnAction.setEnabled(true);
+            holder.btnAction.setBackgroundColor(Color.RED);
+            holder.btnAction.setTextColor(Color.WHITE);
+            holder.btnAction.setOnClickListener(v -> {
+                int curPos = holder.getAdapterPosition();
+                if (curPos == RecyclerView.NO_POSITION) return;
+
+                User currentItem = userList.get(curPos);
+                friendRepository.unfriend(currentUserId, currentItem.getUserId(), new FriendRepository.ActionCallback() {
+                    @Override
+                    public void onSuccess() {
+                        userList.remove(curPos);
+                        notifyItemRemoved(curPos);
+                        notifyItemRangeChanged(curPos, userList.size());
+                        Toast.makeText(context, "Đã hủy kết bạn", Toast.LENGTH_SHORT).show();
+                    }
+
+                    @Override
+                    public void onFailure(String errorMessage) {
+                        Toast.makeText(context, errorMessage, Toast.LENGTH_SHORT).show();
+                    }
+                });
+            });
+        }
     }
 
     private void updateButtonState(Button btn, String otherId) {
         friendRepository.checkFriendshipStatus(currentUserId, otherId, new FriendRepository.StatusCallback() {
             @Override
             public void onSuccess(String status) {
-                if (!otherId.equals(btn.getTag())) {
-                    return;
-                }
-
                 switch (status) {
                     case "accepted":
                         btn.setText("Bạn bè");
                         btn.setEnabled(false);
-                        btn.setBackgroundColor(Color.GRAY);
                         break;
-
                     case "pending":
                         btn.setText("Đã gửi");
                         btn.setEnabled(false);
-                        btn.setBackgroundColor(Color.GRAY);
                         break;
-
                     case "received_pending":
                         btn.setText("Phản hồi");
                         btn.setEnabled(true);
-                        btn.setBackgroundColor(Color.parseColor("#6F4DBF"));
                         btn.setOnClickListener(v -> {
                             Intent intent = new Intent(context, FriendRequestActivity.class);
-                            intent.putExtra(FriendRequestActivity.EXTRA_TARGET_SENDER_ID, otherId);
+                            intent.putExtra(FriendRequestActivity.EXTRA_FILTER_SENDER_ID, otherId);
                             context.startActivity(intent);
                         });
                         break;
-
                     case "none":
                     default:
                         btn.setText("Kết bạn");
                         btn.setEnabled(true);
-                        btn.setBackgroundColor(Color.parseColor("#6F4DBF"));
                         btn.setOnClickListener(v -> {
                             btn.setEnabled(false);
                             friendRepository.sendFriendRequest(currentUserId, otherId, new FriendRepository.ActionCallback() {
                                 @Override
                                 public void onSuccess() {
                                     btn.setText("Đã gửi");
-                                    btn.setBackgroundColor(Color.GRAY);
+                                    btn.setEnabled(false);
+                                    Toast.makeText(context, "Đã gửi lời mời kết bạn", Toast.LENGTH_SHORT).show();
                                 }
 
                                 @Override
@@ -193,19 +162,15 @@ public class FriendAdapter extends RecyclerView.Adapter<FriendAdapter.FriendView
 
             @Override
             public void onFailure(String errorMessage) {
-                if (!otherId.equals(btn.getTag())) {
-                    return;
-                }
-
-                btn.setText("Lỗi");
-                btn.setEnabled(false);
+                btn.setText("Kết bạn");
+                btn.setEnabled(true);
             }
         });
     }
 
     @Override
     public int getItemCount() {
-        return userList.size();
+        return userList == null ? 0 : userList.size();
     }
 
     private String safeText(String value, String fallback) {
@@ -214,8 +179,7 @@ public class FriendAdapter extends RecyclerView.Adapter<FriendAdapter.FriendView
 
     public static class FriendViewHolder extends RecyclerView.ViewHolder {
         ImageView imgAvatar;
-        TextView txtName;
-        TextView txtUsername;
+        TextView txtName, txtUsername;
         Button btnAction;
 
         public FriendViewHolder(@NonNull View itemView) {
