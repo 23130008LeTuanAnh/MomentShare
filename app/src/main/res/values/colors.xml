@@ -1,27 +1,40 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
-    <!-- Basic colors -->
+    <!-- Màu mặc định -->
     <color name="black">#FF000000</color>
     <color name="white">#FFFFFFFF</color>
 
-    <!-- MomentShare main palette - dùng chung cho giao diện trắng/hồng giống Locket -->
-    <color name="ms_primary">#FF5F7E</color>
-    <color name="ms_primary_dark">#E8436D</color>
-    <color name="ms_primary_light">#FFF0F4</color>
-    <color name="ms_accent">#C84BDB</color>
-    <color name="ms_screen">#FFFFFB</color>
-    <color name="ms_surface">#FFFFFFFF</color>
-    <color name="ms_panel">#FFF7FA</color>
-    <color name="ms_stroke">#F1DDE5</color>
-    <color name="ms_divider">#F3E7EC</color>
-    <color name="ms_text">#202124</color>
-    <color name="ms_text_secondary">#7A7178</color>
-    <color name="ms_text_hint">#B8ADB4</color>
-    <color name="ms_danger">#F04461</color>
-    <color name="ms_success">#34C759</color>
-    <color name="ms_warning">#FFB020</color>
+    <!-- Màu chính của MomentShare -->
+    <color name="ms_primary">#FF6F91</color>
+    <color name="ms_primary_dark">#E85C7C</color>
+    <color name="ms_primary_light">#FFE3EA</color>
 
-    <!-- Theme fallback names đang được themes.xml/drawable cũ tham chiếu -->
-    <color name="my_light_primary">#FF5F7E</color>
-    <color name="my_dark_primary">#C73764</color>
+    <!-- Màu nền và khối giao diện -->
+    <color name="ms_screen">#FFF7FA</color>
+    <color name="ms_surface">#FFFFFFFF</color>
+    <color name="ms_surface_soft">#FFF0F5</color>
+
+    <!-- Màu chữ -->
+    <color name="ms_text">#25252A</color>
+    <color name="ms_text_primary">#25252A</color>
+    <color name="ms_text_secondary">#777780</color>
+    <color name="ms_text_hint">#A8A8B0</color>
+
+    <!-- Đường viền / chia cách -->
+    <color name="ms_stroke">#F0D7E0</color>
+    <color name="ms_divider">#F3E4EA</color>
+
+    <!-- Màu trạng thái -->
+    <color name="ms_success">#22C55E</color>
+    <color name="ms_warning">#F59E0B</color>
+    <color name="ms_danger">#EF4444</color>
+    <color name="ms_info">#3B82F6</color>
+
+    <!-- Màu phụ cho admin -->
+    <color name="ms_admin_yellow">#FFD84D</color>
+    <color name="ms_admin_dark">#171717</color>
+
+    <!-- Giữ lại tên màu đang được theme cũ tham chiếu -->
+    <color name="my_light_primary">#FF6F91</color>
+    <color name="my_dark_primary">#FF9CB3</color>
 </resources>
