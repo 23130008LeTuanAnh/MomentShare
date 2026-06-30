@@ -22,7 +22,9 @@ import com.google.firebase.firestore.WriteBatch;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.HashSet;
+import java.util.HashMap;
 import java.util.LinkedHashSet;
+import java.util.Map;
 import java.util.List;
 import java.util.Set;
 
@@ -283,17 +285,20 @@ public class MomentRepository {
 
         DocumentReference momentRef = db.collection(COLLECTION_MOMENTS).document();
         String momentId = momentRef.getId();
+        Timestamp now = Timestamp.now();
 
-        Moment moment = new Moment();
-        moment.setMomentId(momentId);
-        moment.setSenderId(senderId);
-        moment.setImageUrl(imageUrl);
-        moment.setCaption(caption == null ? "" : caption.trim());
-        moment.setCreatedAt(Timestamp.now());
-        moment.setStatus(STATUS_ACTIVE);
+        // Người 5 thực hiện: lưu moment bằng Map để field khớp Firestore Rules.
+        // Đặc biệt bắt buộc có senderId, imageUrl, status = active.
+        Map<String, Object> momentData = new HashMap<>();
+        momentData.put("momentId", momentId);
+        momentData.put("senderId", senderId);
+        momentData.put("imageUrl", imageUrl);
+        momentData.put("caption", caption == null ? "" : caption.trim());
+        momentData.put("createdAt", now);
+        momentData.put("status", STATUS_ACTIVE);
 
         WriteBatch batch = db.batch();
-        batch.set(momentRef, moment);
+        batch.set(momentRef, momentData);
 
         for (String receiverId : receiverIds) {
             if (receiverId == null || receiverId.trim().isEmpty()) {
@@ -301,14 +306,18 @@ public class MomentRepository {
             }
 
             DocumentReference receiverRef = db.collection(COLLECTION_MOMENT_RECEIVERS).document();
-            MomentReceiver receiver = new MomentReceiver();
-            receiver.setId(receiverRef.getId());
-            receiver.setMomentId(momentId);
-            receiver.setReceiverId(receiverId);
-            receiver.setViewed(false);
-            receiver.setViewedAt(null);
 
-            batch.set(receiverRef, receiver);
+            // Người 5 thực hiện: thêm senderId vào moment_receivers để Firestore Rules cho phép người gửi tạo bản ghi người nhận.
+            Map<String, Object> receiverData = new HashMap<>();
+            receiverData.put("id", receiverRef.getId());
+            receiverData.put("momentId", momentId);
+            receiverData.put("senderId", senderId);
+            receiverData.put("receiverId", receiverId);
+            receiverData.put("isViewed", false);
+            receiverData.put("viewedAt", null);
+            receiverData.put("createdAt", now);
+
+            batch.set(receiverRef, receiverData);
 
             DocumentReference notificationRef = db.collection(COLLECTION_NOTIFICATIONS).document();
             NotificationModel notification = new NotificationModel();
@@ -319,7 +328,7 @@ public class MomentRepository {
             notification.setMessage("Bạn vừa nhận được một khoảnh khắc mới.");
             notification.setTargetId(momentId);
             notification.setRead(false);
-            notification.setCreatedAt(Timestamp.now());
+            notification.setCreatedAt(now);
 
             batch.set(notificationRef, notification);
         }
@@ -327,8 +336,9 @@ public class MomentRepository {
         batch.commit()
                 .addOnSuccessListener(unused -> callback.onSuccess(momentId))
                 .addOnFailureListener(e ->
-                        callback.onFailure("Không thể lưu khoảnh khắc: " + e.getMessage()));
+                        callback.onFailure("Upload ảnh thành công nhưng lưu Firestore thất bại: " + e.getMessage()));
     }
+
     public void getHomeFeed(@NonNull String currentUserId, @NonNull MomentListCallback callback) {
         db.collection(COLLECTION_MOMENT_RECEIVERS)
                 .whereEqualTo(FIELD_RECEIVER_ID, currentUserId)
