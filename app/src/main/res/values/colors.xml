@@ -1,40 +1,85 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
-    <!-- Màu mặc định -->
+
+    <!-- ========================= -->
+    <!-- BASIC COLORS -->
+    <!-- ========================= -->
     <color name="black">#FF000000</color>
     <color name="white">#FFFFFFFF</color>
 
-    <!-- Màu chính của MomentShare -->
-    <color name="ms_primary">#FF6F91</color>
-    <color name="ms_primary_dark">#E85C7C</color>
-    <color name="ms_primary_light">#FFE3EA</color>
+    <!-- Sửa lỗi layout cũ gọi @color/black00 -->
+    <color name="black00">#000000</color>
 
-    <!-- Màu nền và khối giao diện -->
-    <color name="ms_screen">#FFF7FA</color>
+
+    <!-- ========================= -->
+    <!-- MOMENTSHARE PRIMARY COLORS -->
+    <!-- ========================= -->
+
+    <!-- Màu chính -->
+    <color name="ms_primary">#FF5F7E</color>
+    <color name="ms_primary_dark">#E85075</color>
+    <color name="ms_primary_light">#FFEAF0</color>
+
+    <!-- Màu gradient dùng cho button / chip / badge / camera -->
+    <color name="ms_primary_start">#FF6B5F</color>
+    <color name="ms_primary_mid">#FF4F86</color>
+    <color name="ms_primary_end">#C944D9</color>
+
+    <!-- Màu phụ đồng bộ UI -->
+    <color name="ms_accent">#FF5F7E</color>
+    <color name="ms_pink">#FF5F7E</color>
+    <color name="ms_purple">#C944D9</color>
+    <color name="ms_coral">#FF6B5F</color>
+
+
+    <!-- ========================= -->
+    <!-- BACKGROUND / SURFACE -->
+    <!-- ========================= -->
+    <color name="ms_screen">#FFFDFD</color>
+    <color name="ms_background">#FFFDFD</color>
     <color name="ms_surface">#FFFFFFFF</color>
-    <color name="ms_surface_soft">#FFF0F5</color>
+    <color name="ms_surface_soft">#FFF4F7</color>
+    <color name="ms_card">#FFFFFFFF</color>
 
-    <!-- Màu chữ -->
-    <color name="ms_text">#25252A</color>
-    <color name="ms_text_primary">#25252A</color>
-    <color name="ms_text_secondary">#777780</color>
-    <color name="ms_text_hint">#A8A8B0</color>
 
-    <!-- Đường viền / chia cách -->
-    <color name="ms_stroke">#F0D7E0</color>
-    <color name="ms_divider">#F3E4EA</color>
+    <!-- ========================= -->
+    <!-- TEXT COLORS -->
+    <!-- ========================= -->
+    <color name="ms_text">#1F2937</color>
+    <color name="ms_text_primary">#1F2937</color>
+    <color name="ms_text_secondary">#8B8FA3</color>
+    <color name="ms_text_hint">#A3A7B8</color>
+    <color name="ms_text_light">#FFFFFF</color>
 
-    <!-- Màu trạng thái -->
+
+    <!-- ========================= -->
+    <!-- BORDER / DIVIDER -->
+    <!-- ========================= -->
+    <color name="ms_stroke">#EEEFF3</color>
+    <color name="ms_border">#EEEFF3</color>
+    <color name="ms_divider">#F1F2F5</color>
+
+
+    <!-- ========================= -->
+    <!-- STATE COLORS -->
+    <!-- ========================= -->
     <color name="ms_success">#22C55E</color>
     <color name="ms_warning">#F59E0B</color>
     <color name="ms_danger">#EF4444</color>
     <color name="ms_info">#3B82F6</color>
 
-    <!-- Màu phụ cho admin -->
+
+    <!-- ========================= -->
+    <!-- ADMIN COLORS -->
+    <!-- ========================= -->
     <color name="ms_admin_yellow">#FFD84D</color>
     <color name="ms_admin_dark">#171717</color>
 
-    <!-- Giữ lại tên màu đang được theme cũ tham chiếu -->
-    <color name="my_light_primary">#FF6F91</color>
+
+    <!-- ========================= -->
+    <!-- COMPAT OLD THEME COLORS -->
+    <!-- ========================= -->
+    <color name="my_light_primary">#FF5F7E</color>
     <color name="my_dark_primary">#FF9CB3</color>
+
 </resources>
