@@ -16,7 +16,7 @@ import java.io.IOException;
 
 import okhttp3.Call;
 import okhttp3.Callback;
-import okhttp3.FormBody;
+import okhttp3.MultipartBody;
 import okhttp3.OkHttpClient;
 import okhttp3.Request;
 import okhttp3.RequestBody;
@@ -95,15 +95,16 @@ public class StorageRepository {
             return;
         }
 
-        // 2. Thiết lập gói dữ liệu (FormBody) gửi lên cổng API ImgBB
-        RequestBody formBody = new FormBody.Builder()
-                .add("key", IMGBB_API_KEY)
-                .add("image", base64Image)
+        // Người 5 thực hiện: dùng multipart/form-data để upload ảnh lên ImgBB ổn định hơn.
+        // API key đặt ở query parameter, ảnh base64 đặt trong field image.
+        RequestBody requestBody = new MultipartBody.Builder()
+                .setType(MultipartBody.FORM)
+                .addFormDataPart("image", base64Image)
                 .build();
 
         Request request = new Request.Builder()
-                .url(IMGBB_UPLOAD_URL)
-                .post(formBody)
+                .url(IMGBB_UPLOAD_URL + "?key=" + IMGBB_API_KEY)
+                .post(requestBody)
                 .build();
 
         // 3. Thực thi tiến trình gửi dữ liệu bất đồng bộ qua mạng
@@ -115,21 +116,34 @@ public class StorageRepository {
 
             @Override
             public void onResponse(@NonNull Call call, @NonNull Response response) throws IOException {
-                if (response.isSuccessful() && response.body() != null) {
+                String responseData = response.body() != null ? response.body().string() : "";
+
+                if (response.isSuccessful()) {
                     try {
-                        String responseData = response.body().string();
                         JSONObject jsonObject = new JSONObject(responseData);
 
-                        // Trích xuất link ảnh trực tiếp từ phản hồi JSON của máy chủ ImgBB
+                        if (!jsonObject.optBoolean("success", true)) {
+                            runOnMainThread(() -> callback.onFailure("ImgBB từ chối avatar: " + responseData));
+                            return;
+                        }
+
                         JSONObject dataObject = jsonObject.getJSONObject("data");
-                        String imageUrl = dataObject.getString("display_url");
+                        String imageUrl = dataObject.optString("display_url",
+                                dataObject.optString("url", ""));
+
+                        if (imageUrl.trim().isEmpty()) {
+                            runOnMainThread(() -> callback.onFailure("ImgBB không trả về URL avatar."));
+                            return;
+                        }
 
                         runOnMainThread(() -> callback.onSuccess(imageUrl));
                     } catch (Exception e) {
-                        runOnMainThread(() -> callback.onFailure("Lỗi cấu trúc dữ liệu ảnh: " + e.getMessage()));
+                        runOnMainThread(() -> callback.onFailure("Lỗi cấu trúc dữ liệu ảnh: "
+                                + e.getMessage() + " | Response: " + responseData));
                     }
                 } else {
-                    runOnMainThread(() -> callback.onFailure("Tải ảnh lên thất bại, mã lỗi: " + response.code()));
+                    runOnMainThread(() -> callback.onFailure("Tải ảnh lên thất bại, mã lỗi: "
+                            + response.code() + " | Response: " + responseData));
                 }
             }
         });
@@ -139,16 +153,23 @@ public class StorageRepository {
      * Hàm hỗ trợ chuyển Uri thành chuỗi Base64 để gửi qua kết nối API
      */
     private String getBase64FromUri(Uri uri) {
-        try {
-            InputStream inputStream = context.getContentResolver().openInputStream(uri);
-            ByteArrayOutputStream outputStream = new ByteArrayOutputStream();
+        try (InputStream inputStream = context.getContentResolver().openInputStream(uri);
+             ByteArrayOutputStream outputStream = new ByteArrayOutputStream()) {
+
+            if (inputStream == null) {
+                return null;
+            }
+
             byte[] buffer = new byte[8192];
             int bytesRead;
             while ((bytesRead = inputStream.read(buffer)) != -1) {
                 outputStream.write(buffer, 0, bytesRead);
             }
+
             byte[] imageBytes = outputStream.toByteArray();
-            return Base64.encodeToString(imageBytes, Base64.DEFAULT);
+
+            // Người 5 thực hiện: dùng NO_WRAP để base64 không bị xuống dòng khi gửi lên ImgBB.
+            return Base64.encodeToString(imageBytes, Base64.NO_WRAP);
         } catch (Exception e) {
             e.printStackTrace();
             return null;
