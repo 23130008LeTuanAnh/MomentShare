@@ -58,6 +58,8 @@
         <activity android:name=".activity.HomeFeedActivity" />
         <activity android:name=".activity.MomentDetailActivity" />
         <activity android:name=".activity.HistoryActivity" />
+        <activity android:name=".activity.ChatListActivity" />
+        <activity android:name=".activity.ChatActivity" />
 
         <!-- Người 2 thêm: Các màn hình quản lý bạn bè -->
         <activity android:name=".activity.FriendListActivity" />
