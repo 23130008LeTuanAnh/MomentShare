@@ -6,24 +6,33 @@ import com.example.momentshare.model.FriendRequest;
 import com.example.momentshare.model.User;
 import com.example.momentshare.util.Constants;
 import com.google.firebase.Timestamp;
+import com.google.firebase.auth.FirebaseAuth;
 import com.google.firebase.firestore.DocumentSnapshot;
 import com.google.firebase.firestore.FirebaseFirestore;
 import com.google.firebase.firestore.WriteBatch;
 
+import java.text.Normalizer;
 import java.util.ArrayList;
 import java.util.HashMap;
+import java.util.LinkedHashMap;
 import java.util.List;
+import java.util.Locale;
 import java.util.Map;
+import java.util.regex.Pattern;
 
 /**
- * FriendRepository xử lý bạn bè và lời mời kết bạn.
+ * FriendRepository xử lý tìm kiếm bạn bè, danh sách bạn bè và lời mời kết bạn.
  *
- * Đã chỉnh:
- * - Lấy lời mời pending theo receiverId rồi lọc status bằng Java để tránh lỗi index.
- * - Thêm countPendingRequests() để Profile hiện số lời mời.
- * - Notification lời mời kết bạn lưu targetId = senderId để bấm thông báo/phản hồi mở đúng màn hình lời mời.
+ * Phần đã chỉnh cho đúng đề tài:
+ * - Tìm kiếm user theo username, email hoặc fullName.
+ * - Lọc tài khoản hiện tại, tài khoản bị khóa và tài khoản admin khỏi kết quả kết bạn.
+ * - Tìm kiếm không phụ thuộc chữ hoa/thường và có hỗ trợ bỏ dấu tiếng Việt khi lọc client.
+ * - Danh sách bạn bè chỉ hiển thị tài khoản còn active.
+ * - Sắp xếp kết quả rõ ràng để dễ demo.
  */
 public class FriendRepository {
+
+    private static final Pattern DIACRITICS_PATTERN = Pattern.compile("\\p{InCombiningDiacriticalMarks}+");
 
     private final FirebaseFirestore db;
     private final NotificationRepository notificationRepository;
@@ -60,86 +69,125 @@ public class FriendRepository {
         void onFailure(String errorMessage);
     }
 
+    /**
+     * Tìm bạn bằng username, email hoặc fullName.
+     *
+     * Dùng cách get users rồi lọc ở client để tránh lỗi thiếu index Firestore khi demo.
+     * Với đồ án/lớp học và dữ liệu ít, cách này ổn định hơn orderBy nhiều field.
+     */
     public void searchUsers(String query, UserListCallback callback) {
-        String rawQuery = query == null ? "" : query.trim().toLowerCase();
-        if (rawQuery.isEmpty()) {
+        String rawQuery = query == null ? "" : query.trim();
+        String normalizedQuery = normalizeSearchText(rawQuery);
+
+        if (normalizedQuery.isEmpty()) {
             callback.onSuccess(new ArrayList<>());
             return;
         }
 
+        String currentUserId = getCurrentUserId();
+
         db.collection(Constants.COLLECTION_USERS)
-                .orderBy("username")
-                .startAt(rawQuery)
-                .endAt(rawQuery + "\uf8ff")
-                .limit(20)
                 .get()
                 .addOnSuccessListener(querySnapshot -> {
-                    List<User> users = new ArrayList<>();
+                    Map<String, User> resultMap = new LinkedHashMap<>();
+
                     for (DocumentSnapshot doc : querySnapshot.getDocuments()) {
                         User user = doc.toObject(User.class);
-                        if (user != null) users.add(user);
+                        if (user == null) continue;
+
+                        if (isEmpty(user.getUserId())) {
+                            user.setUserId(doc.getId());
+                        }
+
+                        if (!canShowInFriendSearch(user, currentUserId)) continue;
+                        if (!matchesUserKeyword(user, normalizedQuery)) continue;
+
+                        resultMap.put(user.getUserId(), user);
                     }
 
-                    if (!users.isEmpty()) {
-                        callback.onSuccess(users);
-                        return;
-                    }
-
-                    db.collection(Constants.COLLECTION_USERS)
-                            .orderBy("email")
-                            .startAt(rawQuery)
-                            .endAt(rawQuery + "\uf8ff")
-                            .limit(20)
-                            .get()
-                            .addOnSuccessListener(emailSnapshot -> {
-                                for (DocumentSnapshot doc : emailSnapshot.getDocuments()) {
-                                    User user = doc.toObject(User.class);
-                                    if (user != null) users.add(user);
-                                }
-                                callback.onSuccess(users);
-                            })
-                            .addOnFailureListener(e -> callback.onFailure(buildErrorMessage(e)));
+                    List<User> users = new ArrayList<>(resultMap.values());
+                    sortUsersByKeyword(users, normalizedQuery);
+                    callback.onSuccess(users);
                 })
                 .addOnFailureListener(e -> callback.onFailure(buildErrorMessage(e)));
     }
 
     public void sendFriendRequest(String senderId, String receiverId, ActionCallback callback) {
-        checkFriendshipStatus(senderId, receiverId, new StatusCallback() {
-            @Override
-            public void onSuccess(String status) {
-                if ("accepted".equals(status)) {
-                    callback.onFailure("Hai người đã là bạn bè");
-                    return;
-                }
+        if (isEmpty(senderId)) {
+            callback.onFailure("Bạn cần đăng nhập để gửi lời mời kết bạn");
+            return;
+        }
 
-                if ("pending".equals(status)) {
-                    callback.onFailure("Bạn đã gửi lời mời kết bạn trước đó");
-                    return;
-                }
+        if (isEmpty(receiverId)) {
+            callback.onFailure("Không xác định được tài khoản nhận lời mời");
+            return;
+        }
 
-                if ("received_pending".equals(status)) {
-                    callback.onFailure("Người này đã gửi lời mời cho bạn. Hãy vào mục Lời mời kết bạn để phản hồi.");
-                    return;
-                }
+        if (senderId.equals(receiverId)) {
+            callback.onFailure("Bạn không thể kết bạn với chính mình");
+            return;
+        }
 
-                String requestId = db.collection(Constants.COLLECTION_FRIEND_REQUESTS).document().getId();
-                FriendRequest request = new FriendRequest(requestId, senderId, receiverId, "pending", Timestamp.now());
+        db.collection(Constants.COLLECTION_USERS).document(receiverId).get()
+                .addOnSuccessListener(receiverDoc -> {
+                    User receiver = receiverDoc.toObject(User.class);
+                    if (receiver == null) {
+                        callback.onFailure("Tài khoản này không tồn tại");
+                        return;
+                    }
 
-                db.collection(Constants.COLLECTION_FRIEND_REQUESTS)
-                        .document(requestId)
-                        .set(request)
-                        .addOnSuccessListener(aVoid -> {
-                            sendRequestNotification(senderId, receiverId);
-                            callback.onSuccess();
-                        })
-                        .addOnFailureListener(e -> callback.onFailure(buildErrorMessage(e)));
-            }
+                    if (isEmpty(receiver.getUserId())) {
+                        receiver.setUserId(receiverDoc.getId());
+                    }
 
-            @Override
-            public void onFailure(String errorMessage) {
-                callback.onFailure(errorMessage);
-            }
-        });
+                    if (!Constants.STATUS_ACTIVE.equalsIgnoreCase(safeString(receiver.getStatus()))) {
+                        callback.onFailure("Tài khoản này đang bị khóa hoặc không khả dụng");
+                        return;
+                    }
+
+                    if (Constants.ROLE_ADMIN.equalsIgnoreCase(safeString(receiver.getRole()))) {
+                        callback.onFailure("Không thể gửi lời mời kết bạn đến tài khoản quản trị");
+                        return;
+                    }
+
+                    checkFriendshipStatus(senderId, receiverId, new StatusCallback() {
+                        @Override
+                        public void onSuccess(String status) {
+                            if ("accepted".equals(status)) {
+                                callback.onFailure("Hai người đã là bạn bè");
+                                return;
+                            }
+
+                            if ("pending".equals(status)) {
+                                callback.onFailure("Bạn đã gửi lời mời kết bạn trước đó");
+                                return;
+                            }
+
+                            if ("received_pending".equals(status)) {
+                                callback.onFailure("Người này đã gửi lời mời cho bạn. Hãy vào mục Lời mời kết bạn để phản hồi.");
+                                return;
+                            }
+
+                            String requestId = db.collection(Constants.COLLECTION_FRIEND_REQUESTS).document().getId();
+                            FriendRequest request = new FriendRequest(requestId, senderId, receiverId, "pending", Timestamp.now());
+
+                            db.collection(Constants.COLLECTION_FRIEND_REQUESTS)
+                                    .document(requestId)
+                                    .set(request)
+                                    .addOnSuccessListener(aVoid -> {
+                                        sendRequestNotification(senderId, receiverId);
+                                        callback.onSuccess();
+                                    })
+                                    .addOnFailureListener(e -> callback.onFailure(buildErrorMessage(e)));
+                        }
+
+                        @Override
+                        public void onFailure(String errorMessage) {
+                            callback.onFailure(errorMessage);
+                        }
+                    });
+                })
+                .addOnFailureListener(e -> callback.onFailure(buildErrorMessage(e)));
     }
 
     private void sendRequestNotification(String senderId, String receiverId) {
@@ -178,11 +226,11 @@ public class FriendRepository {
                         FriendRequest request = doc.toObject(FriendRequest.class);
                         if (request == null) continue;
 
-                        if (request.getRequestId() == null || request.getRequestId().trim().isEmpty()) {
+                        if (isEmpty(request.getRequestId())) {
                             request.setRequestId(doc.getId());
                         }
 
-                        String status = request.getStatus() == null ? "" : request.getStatus().trim();
+                        String status = safeString(request.getStatus());
                         if ("pending".equalsIgnoreCase(status)) {
                             requests.add(request);
                         }
@@ -280,7 +328,7 @@ public class FriendRepository {
                     List<String> friendIds = new ArrayList<>();
                     for (DocumentSnapshot doc : querySnapshot.getDocuments()) {
                         String friendUserId = doc.getString("friendUserId");
-                        if (friendUserId != null && !friendUserId.trim().isEmpty()) {
+                        if (!isEmpty(friendUserId) && !friendIds.contains(friendUserId)) {
                             friendIds.add(friendUserId);
                         }
                     }
@@ -296,13 +344,28 @@ public class FriendRepository {
                         db.collection(Constants.COLLECTION_USERS).document(friendId).get()
                                 .addOnSuccessListener(userDoc -> {
                                     User user = userDoc.toObject(User.class);
-                                    if (user != null) friendUsers.add(user);
+                                    if (user != null) {
+                                        if (isEmpty(user.getUserId())) {
+                                            user.setUserId(userDoc.getId());
+                                        }
+
+                                        if (Constants.STATUS_ACTIVE.equalsIgnoreCase(safeString(user.getStatus()))) {
+                                            friendUsers.add(user);
+                                        }
+                                    }
+
                                     count[0]++;
-                                    if (count[0] == friendIds.size()) callback.onSuccess(friendUsers);
+                                    if (count[0] == friendIds.size()) {
+                                        friendUsers.sort((left, right) -> buildSortableName(left).compareTo(buildSortableName(right)));
+                                        callback.onSuccess(friendUsers);
+                                    }
                                 })
                                 .addOnFailureListener(e -> {
                                     count[0]++;
-                                    if (count[0] == friendIds.size()) callback.onSuccess(friendUsers);
+                                    if (count[0] == friendIds.size()) {
+                                        friendUsers.sort((left, right) -> buildSortableName(left).compareTo(buildSortableName(right)));
+                                        callback.onSuccess(friendUsers);
+                                    }
                                 });
                     }
                 })
@@ -310,6 +373,11 @@ public class FriendRepository {
     }
 
     public void unfriend(String userId, String friendId, ActionCallback callback) {
+        if (isEmpty(userId) || isEmpty(friendId)) {
+            callback.onFailure("Không xác định được tài khoản cần hủy kết bạn");
+            return;
+        }
+
         WriteBatch batch = db.batch();
         batch.delete(db.collection(Constants.COLLECTION_FRIENDS).document(userId + "_" + friendId));
         batch.delete(db.collection(Constants.COLLECTION_FRIENDS).document(friendId + "_" + userId));
@@ -320,6 +388,16 @@ public class FriendRepository {
     }
 
     public void checkFriendshipStatus(String userId, String otherId, StatusCallback callback) {
+        if (isEmpty(userId) || isEmpty(otherId)) {
+            callback.onSuccess("none");
+            return;
+        }
+
+        if (userId.equals(otherId)) {
+            callback.onSuccess("self");
+            return;
+        }
+
         db.collection(Constants.COLLECTION_FRIENDS)
                 .document(userId + "_" + otherId)
                 .get()
@@ -337,7 +415,7 @@ public class FriendRepository {
                                 boolean hasPendingSent = false;
                                 for (DocumentSnapshot requestDoc : q1.getDocuments()) {
                                     String status = requestDoc.getString("status");
-                                    if ("pending".equalsIgnoreCase(status)) {
+                                    if ("pending".equalsIgnoreCase(safeString(status))) {
                                         hasPendingSent = true;
                                         break;
                                     }
@@ -356,7 +434,7 @@ public class FriendRepository {
                                             boolean hasPendingReceived = false;
                                             for (DocumentSnapshot requestDoc : q2.getDocuments()) {
                                                 String status = requestDoc.getString("status");
-                                                if ("pending".equalsIgnoreCase(status)) {
+                                                if ("pending".equalsIgnoreCase(safeString(status))) {
                                                     hasPendingReceived = true;
                                                     break;
                                                 }
@@ -370,19 +448,90 @@ public class FriendRepository {
                 .addOnFailureListener(e -> callback.onFailure(buildErrorMessage(e)));
     }
 
+    private boolean canShowInFriendSearch(User user, String currentUserId) {
+        if (user == null || isEmpty(user.getUserId())) return false;
+        if (!isEmpty(currentUserId) && currentUserId.equals(user.getUserId())) return false;
+        if (!Constants.STATUS_ACTIVE.equalsIgnoreCase(safeString(user.getStatus()))) return false;
+        return !Constants.ROLE_ADMIN.equalsIgnoreCase(safeString(user.getRole()));
+    }
+
+    private boolean matchesUserKeyword(User user, String normalizedQuery) {
+        String username = normalizeSearchText(user.getUsername());
+        String email = normalizeSearchText(user.getEmail());
+        String fullName = normalizeSearchText(user.getFullName());
+
+        return username.contains(normalizedQuery)
+                || email.contains(normalizedQuery)
+                || fullName.contains(normalizedQuery);
+    }
+
+    private void sortUsersByKeyword(List<User> users, String normalizedQuery) {
+        users.sort((left, right) -> {
+            int leftScore = buildMatchScore(left, normalizedQuery);
+            int rightScore = buildMatchScore(right, normalizedQuery);
+            if (leftScore != rightScore) return Integer.compare(leftScore, rightScore);
+            return buildSortableName(left).compareTo(buildSortableName(right));
+        });
+    }
+
+    private int buildMatchScore(User user, String normalizedQuery) {
+        String username = normalizeSearchText(user.getUsername());
+        String email = normalizeSearchText(user.getEmail());
+        String fullName = normalizeSearchText(user.getFullName());
+
+        if (username.equals(normalizedQuery)) return 0;
+        if (email.equals(normalizedQuery)) return 1;
+        if (username.startsWith(normalizedQuery)) return 2;
+        if (email.startsWith(normalizedQuery)) return 3;
+        if (fullName.startsWith(normalizedQuery)) return 4;
+        if (fullName.contains(normalizedQuery)) return 5;
+        return 6;
+    }
+
+    private String buildSortableName(User user) {
+        if (user == null) return "";
+        String fullName = normalizeSearchText(user.getFullName());
+        if (!fullName.isEmpty()) return fullName;
+        String username = normalizeSearchText(user.getUsername());
+        if (!username.isEmpty()) return username;
+        return normalizeSearchText(user.getEmail());
+    }
+
     private String buildUserDisplayName(User user) {
         if (user == null) return "Người dùng MomentShare";
 
         String fullName = user.getFullName();
         String username = user.getUsername();
 
-        if (fullName != null && !fullName.trim().isEmpty()
-                && username != null && !username.trim().isEmpty()) {
-            return fullName + " (@" + username + ")";
+        if (!isEmpty(fullName) && !isEmpty(username)) {
+            return fullName.trim() + " (@" + username.trim() + ")";
         }
-        if (fullName != null && !fullName.trim().isEmpty()) return fullName;
-        if (username != null && !username.trim().isEmpty()) return "@" + username;
+        if (!isEmpty(fullName)) return fullName.trim();
+        if (!isEmpty(username)) return "@" + username.trim();
         return "Người dùng MomentShare";
+    }
+
+    private String normalizeSearchText(String value) {
+        if (value == null) return "";
+
+        String normalized = Normalizer.normalize(value.trim().toLowerCase(Locale.ROOT), Normalizer.Form.NFD);
+        normalized = DIACRITICS_PATTERN.matcher(normalized).replaceAll("");
+        normalized = normalized.replace('đ', 'd').replace('Đ', 'd');
+        return normalized;
+    }
+
+    private String getCurrentUserId() {
+        return FirebaseAuth.getInstance().getCurrentUser() == null
+                ? ""
+                : FirebaseAuth.getInstance().getCurrentUser().getUid();
+    }
+
+    private String safeString(String value) {
+        return value == null ? "" : value.trim();
+    }
+
+    private boolean isEmpty(String value) {
+        return value == null || value.trim().isEmpty();
     }
 
     private String buildErrorMessage(Exception e) {
