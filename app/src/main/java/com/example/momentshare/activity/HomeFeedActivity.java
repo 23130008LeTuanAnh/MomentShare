@@ -61,6 +61,30 @@ public class HomeFeedActivity extends AppCompatActivity implements MomentAdapter
         btnOpenHistory.setOnClickListener(v ->
                 startActivity(new Intent(HomeFeedActivity.this, HistoryActivity.class))
         );
+
+        // Người 1 thực hiện: đồng bộ điều hướng dưới Feed với giao diện mới,
+        // chỉ mở các chức năng đang có thật trong app.
+        View navHistory = findViewById(R.id.navHistory);
+        View navChat = findViewById(R.id.navChat);
+        View navProfile = findViewById(R.id.navShare);
+
+        if (navHistory != null) {
+            navHistory.setOnClickListener(v ->
+                    startActivity(new Intent(HomeFeedActivity.this, HistoryActivity.class))
+            );
+        }
+
+        if (navChat != null) {
+            navChat.setOnClickListener(v ->
+                    startActivity(new Intent(HomeFeedActivity.this, ChatListActivity.class))
+            );
+        }
+
+        if (navProfile != null) {
+            navProfile.setOnClickListener(v ->
+                    startActivity(new Intent(HomeFeedActivity.this, ProfileActivity.class))
+            );
+        }
     }
 
     @Override
