@@ -12,6 +12,7 @@ import android.widget.Toast;
 import androidx.appcompat.app.AppCompatActivity;
 
 import com.example.momentshare.R;
+import com.example.momentshare.helper.FcmTokenManager;
 import com.example.momentshare.repository.AuthManager;
 import com.example.momentshare.util.ValidationUtils;
 
@@ -25,7 +26,8 @@ import com.example.momentshare.util.ValidationUtils;
  * - Kiểm tra dữ liệu nhập.
  * - Gọi AuthManager để đăng nhập bằng Firebase Authentication.
  * - Kiểm tra trạng thái tài khoản active/locked trong Firestore.
- * - Nếu đăng nhập thành công, chuyển sang ProfileActivity.
+ * - Nếu đăng nhập thành công, đăng ký FCM token cho thiết bị.
+ * - Chuyển sang ProfileActivity.
  */
 public class LoginActivity extends AppCompatActivity {
 
@@ -81,7 +83,8 @@ public class LoginActivity extends AppCompatActivity {
      * 1. Lấy email/username và mật khẩu.
      * 2. Kiểm tra dữ liệu rỗng.
      * 3. Gọi AuthManager.loginWithEmailOrUsername().
-     * 4. Nếu đăng nhập thành công, chuyển sang ProfileActivity.
+     * 4. Nếu đăng nhập thành công, đăng ký FCM token cho thiết bị.
+     * 5. Chuyển sang ProfileActivity.
      */
     private void handleLogin() {
         String account = edtAccount.getText().toString().trim();
@@ -97,6 +100,14 @@ public class LoginActivity extends AppCompatActivity {
             @Override
             public void onSuccess() {
                 setLoading(false);
+
+                // Người 5 thực hiện: sau khi đăng nhập thành công,
+                // đăng ký thiết bị hiện tại với Firebase Cloud Messaging.
+                // Hàm này sẽ:
+                // 1. Xin quyền POST_NOTIFICATIONS trên Android 13+.
+                // 2. Lấy FCM token của thiết bị.
+                // 3. Lưu token vào Firestore tại users/{uid}.
+                new FcmTokenManager().registerCurrentUserDevice(LoginActivity.this);
 
                 Toast.makeText(
                         LoginActivity.this,

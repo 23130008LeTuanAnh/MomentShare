@@ -20,6 +20,10 @@ import java.util.Map;
 
 /**
  * AdminRepository gom các thao tác quản trị: thống kê, quản lý người dùng và xử lý báo cáo.
+ *
+ * Đã chỉnh:
+ * - Xử lý report vẫn thành công nếu momentId demo/không tồn tại.
+ * - Nếu moment tồn tại thì ẩn moment bằng status hidden.
  */
 public class AdminRepository {
 
@@ -54,14 +58,10 @@ public class AdminRepository {
                 .get()
                 .addOnSuccessListener(querySnapshot -> {
                     List<User> users = new ArrayList<>();
-
                     for (QueryDocumentSnapshot document : querySnapshot) {
                         User user = document.toObject(User.class);
-                        if (user != null) {
-                            users.add(user);
-                        }
+                        if (user != null) users.add(user);
                     }
-
                     sortUsersByName(users);
                     callback.onSuccess(users);
                 })
@@ -93,14 +93,10 @@ public class AdminRepository {
                 .get()
                 .addOnSuccessListener(querySnapshot -> {
                     List<ReportModel> reports = new ArrayList<>();
-
                     for (QueryDocumentSnapshot document : querySnapshot) {
                         ReportModel report = document.toObject(ReportModel.class);
-                        if (report != null) {
-                            reports.add(report);
-                        }
+                        if (report != null) reports.add(report);
                     }
-
                     sortReportsByNewest(reports);
                     callback.onSuccess(reports);
                 })
@@ -111,13 +107,11 @@ public class AdminRepository {
                              @NonNull String momentId,
                              @NonNull String reason,
                              @NonNull ActionCallback callback) {
-        // Người 5 thực hiện: kiểm tra dữ liệu báo cáo trước khi lưu để user không gửi báo cáo rỗng.
         if (reporterId.trim().isEmpty() || momentId.trim().isEmpty() || reason.trim().isEmpty()) {
             callback.onFailure("Thiếu thông tin báo cáo");
             return;
         }
 
-        // Người 5 thực hiện: chặn user báo cáo trùng cùng một khoảnh khắc nhiều lần.
         db.collection(Constants.COLLECTION_REPORTS)
                 .whereEqualTo("reporterId", reporterId)
                 .whereEqualTo("momentId", momentId)
@@ -130,7 +124,6 @@ public class AdminRepository {
                     }
 
                     String reportId = db.collection(Constants.COLLECTION_REPORTS).document().getId();
-
                     ReportModel report = new ReportModel(
                             reportId,
                             reporterId,
@@ -161,24 +154,34 @@ public class AdminRepository {
                                            @NonNull String momentId,
                                            @NonNull String handledBy,
                                            @NonNull ActionCallback callback) {
-        WriteBatch batch = db.batch();
-
-        batch.update(
-                db.collection(Constants.COLLECTION_REPORTS).document(reportId),
-                buildHandledReportData(Constants.REPORT_STATUS_RESOLVED, handledBy)
-        );
-
-        if (momentId != null && !momentId.trim().isEmpty()) {
-            batch.update(
-                    db.collection(Constants.COLLECTION_MOMENTS).document(momentId),
-                    "status",
-                    Constants.MOMENT_STATUS_HIDDEN
-            );
+        if (momentId == null || momentId.trim().isEmpty()) {
+            updateReport(reportId, Constants.REPORT_STATUS_RESOLVED, handledBy, callback);
+            return;
         }
 
-        batch.commit()
-                .addOnSuccessListener(unused -> callback.onSuccess())
-                .addOnFailureListener(e -> callback.onFailure("Không thể xử lý báo cáo: " + e.getMessage()));
+        db.collection(Constants.COLLECTION_MOMENTS)
+                .document(momentId)
+                .get()
+                .addOnSuccessListener(momentDoc -> {
+                    WriteBatch batch = db.batch();
+                    batch.update(
+                            db.collection(Constants.COLLECTION_REPORTS).document(reportId),
+                            buildHandledReportData(Constants.REPORT_STATUS_RESOLVED, handledBy)
+                    );
+
+                    if (momentDoc.exists()) {
+                        batch.update(
+                                db.collection(Constants.COLLECTION_MOMENTS).document(momentId),
+                                "status",
+                                Constants.MOMENT_STATUS_HIDDEN
+                        );
+                    }
+
+                    batch.commit()
+                            .addOnSuccessListener(unused -> callback.onSuccess())
+                            .addOnFailureListener(e -> callback.onFailure("Không thể xử lý báo cáo: " + e.getMessage()));
+                })
+                .addOnFailureListener(e -> callback.onFailure("Không thể kiểm tra khoảnh khắc bị báo cáo: " + e.getMessage()));
     }
 
     public void loadStatistics(@NonNull StatisticsCallback callback) {
@@ -193,33 +196,21 @@ public class AdminRepository {
                 .addOnSuccessListener(usersSnapshot -> {
                     totalUsers[0] = usersSnapshot.size();
                     for (QueryDocumentSnapshot document : usersSnapshot) {
-                        if (Constants.STATUS_LOCKED.equals(document.getString("status"))) {
-                            lockedUsers[0]++;
-                        }
+                        if (Constants.STATUS_LOCKED.equals(document.getString("status"))) lockedUsers[0]++;
                     }
 
                     db.collection(Constants.COLLECTION_MOMENTS)
                             .get()
                             .addOnSuccessListener(momentsSnapshot -> {
                                 totalMoments[0] = momentsSnapshot.size();
-
                                 db.collection(Constants.COLLECTION_REPORTS)
                                         .get()
                                         .addOnSuccessListener(reportsSnapshot -> {
                                             totalReports[0] = reportsSnapshot.size();
                                             for (QueryDocumentSnapshot document : reportsSnapshot) {
-                                                if (Constants.REPORT_STATUS_PENDING.equals(document.getString("status"))) {
-                                                    pendingReports[0]++;
-                                                }
+                                                if (Constants.REPORT_STATUS_PENDING.equals(document.getString("status"))) pendingReports[0]++;
                                             }
-
-                                            callback.onSuccess(new StatisticsModel(
-                                                    totalUsers[0],
-                                                    totalMoments[0],
-                                                    totalReports[0],
-                                                    pendingReports[0],
-                                                    lockedUsers[0]
-                                            ));
+                                            callback.onSuccess(new StatisticsModel(totalUsers[0], totalMoments[0], totalReports[0], pendingReports[0], lockedUsers[0]));
                                         })
                                         .addOnFailureListener(e -> callback.onFailure("Không tải được thống kê báo cáo: " + e.getMessage()));
                             })
@@ -241,11 +232,11 @@ public class AdminRepository {
 
     private Map<String, Object> buildHandledReportData(@NonNull String status,
                                                        @NonNull String handledBy) {
-        Map<String, Object> data = new HashMap<>();
-        data.put("status", status);
-        data.put("handledBy", handledBy);
-        data.put("handledAt", Timestamp.now());
-        return data;
+        Map<String, Object> updates = new HashMap<>();
+        updates.put("status", status);
+        updates.put("handledBy", handledBy);
+        updates.put("handledAt", Timestamp.now());
+        return updates;
     }
 
     private void sortUsersByName(@NonNull List<User> users) {
@@ -256,15 +247,9 @@ public class AdminRepository {
         Collections.sort(reports, (left, right) -> {
             Timestamp leftTime = left.getCreatedAt();
             Timestamp rightTime = right.getCreatedAt();
-            if (leftTime == null && rightTime == null) {
-                return 0;
-            }
-            if (leftTime == null) {
-                return 1;
-            }
-            if (rightTime == null) {
-                return -1;
-            }
+            if (leftTime == null && rightTime == null) return 0;
+            if (leftTime == null) return 1;
+            if (rightTime == null) return -1;
             return rightTime.compareTo(leftTime);
         });
     }

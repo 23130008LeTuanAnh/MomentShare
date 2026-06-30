@@ -5,12 +5,12 @@ import android.os.Bundle;
 import android.view.View;
 import android.widget.ImageButton;
 import android.widget.Toast;
+
 import androidx.appcompat.app.AppCompatActivity;
 import androidx.recyclerview.widget.LinearLayoutManager;
 import androidx.recyclerview.widget.RecyclerView;
 
 import com.example.momentshare.R;
-import com.example.momentshare.activity.HistoryActivity;
 import com.example.momentshare.model.Moment;
 import com.example.momentshare.repository.MomentRepository;
 import com.google.firebase.auth.FirebaseAuth;
@@ -18,6 +18,12 @@ import com.google.firebase.auth.FirebaseAuth;
 import java.util.ArrayList;
 import java.util.List;
 
+/**
+ * HomeFeedActivity hiển thị các khoảnh khắc trên trang Home.
+ *
+ * Đã chỉnh:
+ * - Xóa Toast debug "Opening moment from..." khi mở detail.
+ */
 public class HomeFeedActivity extends AppCompatActivity implements MomentAdapter.OnMomentClickListener {
 
     private RecyclerView rvHomeFeed;
@@ -33,7 +39,6 @@ public class HomeFeedActivity extends AppCompatActivity implements MomentAdapter
         btnOpenCamera.setOnClickListener(new View.OnClickListener() {
             @Override
             public void onClick(View v) {
-                // Thực hiện chuyển hướng sang CameraActivity của module Người 3
                 Intent intent = new Intent(HomeFeedActivity.this, CameraActivity.class);
                 startActivity(intent);
             }
@@ -46,14 +51,10 @@ public class HomeFeedActivity extends AppCompatActivity implements MomentAdapter
         rvHomeFeed.setLayoutManager(new LinearLayoutManager(this));
         rvHomeFeed.setHasFixedSize(true);
 
-        // Khởi tạo Repository để giao tiếp với Firebase
         momentRepository = new MomentRepository(this);
-
-        // Khởi tạo Adapter với danh sách rỗng ban đầu, giao diện sẽ chưa hiện gì cả
         momentAdapter = new MomentAdapter(this, new ArrayList<>(), this);
         rvHomeFeed.setAdapter(momentAdapter);
 
-        // Gọi hàm kéo dữ liệu thật từ Firebase về
         loadRealData();
 
         btnOpenHistory.setOnClickListener(v ->
@@ -64,7 +65,6 @@ public class HomeFeedActivity extends AppCompatActivity implements MomentAdapter
     @Override
     protected void onResume() {
         super.onResume();
-        // Tự động tải lại dữ liệu mỗi khi quay lại màn hình Home
         loadRealData();
     }
 
@@ -80,51 +80,42 @@ public class HomeFeedActivity extends AppCompatActivity implements MomentAdapter
             public void onSuccess(List<Moment> privateMoments) {
                 final List<Moment> allMoments = new ArrayList<>(privateMoments);
 
-                // Kéo thêm các bài viết được gắn nhãn công khai
                 com.google.firebase.firestore.FirebaseFirestore.getInstance()
                         .collection("moments")
                         .whereEqualTo("isPublic", true)
                         .get()
                         .addOnSuccessListener(queryDocumentSnapshots -> {
                             for (com.google.firebase.firestore.DocumentSnapshot doc : queryDocumentSnapshots.getDocuments()) {
-                                Moment m = doc.toObject(Moment.class);
-                                if (m != null && "active".equals(m.getStatus())) {
-                                    if (m.getMomentId() == null || m.getMomentId().isEmpty()) {
-                                        m.setMomentId(doc.getId());
+                                Moment moment = doc.toObject(Moment.class);
+                                if (moment != null && "active".equals(moment.getStatus())) {
+                                    if (moment.getMomentId() == null || moment.getMomentId().isEmpty()) {
+                                        moment.setMomentId(doc.getId());
                                     }
 
-                                    // Kiểm tra trùng lặp phần tử trùng ID
                                     boolean isDuplicate = false;
                                     for (Moment existing : allMoments) {
-                                        if (existing.getMomentId().equals(m.getMomentId())) {
+                                        if (existing.getMomentId() != null && existing.getMomentId().equals(moment.getMomentId())) {
                                             isDuplicate = true;
                                             break;
                                         }
                                     }
+
                                     if (!isDuplicate) {
-                                        allMoments.add(m);
+                                        allMoments.add(moment);
                                     }
                                 }
                             }
 
-                            // Sắp xếp lại toàn bộ danh sách gộp theo thứ tự thời gian mới nhất lên đầu
                             java.util.Collections.sort(allMoments, (m1, m2) -> {
                                 if (m1.getCreatedAt() == null && m2.getCreatedAt() == null) return 0;
-
                                 if (m1.getCreatedAt() == null) return 1;
-
                                 if (m2.getCreatedAt() == null) return -1;
-
                                 return m2.getCreatedAt().compareTo(m1.getCreatedAt());
                             });
 
-                            // Cập nhật giao diện hiển thị lên RecyclerView
                             momentAdapter.updateData(allMoments);
                         })
-                        .addOnFailureListener(e -> {
-                            // Nếu lỗi khi tải bài công khai, vẫn hiển thị danh sách bài riêng tư
-                            momentAdapter.updateData(allMoments);
-                        });
+                        .addOnFailureListener(e -> momentAdapter.updateData(allMoments));
             }
 
             @Override
@@ -136,8 +127,6 @@ public class HomeFeedActivity extends AppCompatActivity implements MomentAdapter
 
     @Override
     public void onMomentClick(Moment moment) {
-        Toast.makeText(this, "Opening moment from: " + moment.getSenderId(), Toast.LENGTH_SHORT).show();
-
         Intent intent = new Intent(HomeFeedActivity.this, MomentDetailActivity.class);
         putMomentExtras(intent, moment);
         startActivity(intent);
@@ -152,5 +141,4 @@ public class HomeFeedActivity extends AppCompatActivity implements MomentAdapter
             intent.putExtra(MomentDetailActivity.EXTRA_CREATED_AT, moment.getCreatedAt().toDate().getTime());
         }
     }
-
 }

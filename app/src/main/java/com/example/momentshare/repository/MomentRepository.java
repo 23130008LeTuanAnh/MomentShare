@@ -26,6 +26,10 @@ import java.util.HashSet;
 import java.util.LinkedHashSet;
 import java.util.List;
 import java.util.Set;
+import com.google.android.gms.tasks.Task;
+import com.google.android.gms.tasks.Tasks;
+import com.google.firebase.firestore.DocumentSnapshot;
+import com.google.firebase.firestore.QueryDocumentSnapshot;
 
 public class MomentRepository {
 
@@ -483,5 +487,85 @@ public class MomentRepository {
                 })
                 .addOnFailureListener(e ->
                         callback.onFailure(e.getMessage()));
+    }
+
+    /**
+     * Lấy toàn bộ danh sách khoảnh khắc do chính người dùng này gửi đi
+     */
+    public void getMomentsSentByUser(String currentUserId, MomentListCallback callback) {
+        db.collection("moments")
+                .whereEqualTo("senderId", currentUserId)
+                .get()
+                .addOnSuccessListener(queryDocumentSnapshots -> {
+                    List<Moment> sentMoments = new ArrayList<>();
+                    for (QueryDocumentSnapshot document : queryDocumentSnapshots) {
+                        Moment moment = document.toObject(Moment.class);
+                        if (moment != null) {
+                            // Đảm bảo luôn gán ID document phòng trường hợp đối tượng bị rỗng ID
+                            if (moment.getMomentId() == null || moment.getMomentId().isEmpty()) {
+                                moment.setMomentId(document.getId());
+                            }
+                            sentMoments.add(moment);
+                        }
+                    }
+                    callback.onSuccess(sentMoments);
+                })
+                .addOnFailureListener(e -> callback.onError(e));
+    }
+
+    /**
+     * Lấy toàn bộ danh sách khoảnh khắc mà người dùng này được nhận từ bạn bè
+     */
+    public void getMomentsReceivedByUser(String currentUserId, MomentListCallback callback) {
+        // 1. Tìm trong bảng trung gian COLLECTION_MOMENT_RECEIVERS xem user nhận được những momentId nào
+        db.collection(COLLECTION_MOMENT_RECEIVERS)
+                .whereEqualTo("receiverId", currentUserId)
+                .get()
+                .addOnSuccessListener(receiverSnapshots -> {
+                    if (receiverSnapshots.isEmpty()) {
+                        callback.onSuccess(new ArrayList<>());
+                        return;
+                    }
+
+                    List<String> momentIds = new ArrayList<>();
+                    for (QueryDocumentSnapshot doc : receiverSnapshots) {
+                        String mId = doc.getString("momentId");
+                        if (mId != null && !mId.isEmpty()) {
+                            momentIds.add(mId);
+                        }
+                    }
+
+                    if (momentIds.isEmpty()) {
+                        callback.onSuccess(new ArrayList<>());
+                        return;
+                    }
+
+                    // 2. Kéo thông tin chi tiết của từng bức ảnh từ danh sách ID tìm được ở trên
+                    List<Moment> receivedMoments = new ArrayList<>();
+                    List<Task<DocumentSnapshot>> tasks = new ArrayList<>();
+                    for (String id : momentIds) {
+                        tasks.add(db.collection("moments").document(id).get());
+                    }
+
+                    // Đợi tất cả các tiến trình tải ảnh đơn lẻ chạy xong thì gộp kết quả trả về UI
+                    Tasks.whenAllComplete(tasks).addOnCompleteListener(allTasks -> {
+                        for (Task<DocumentSnapshot> task : tasks) {
+                            if (task.isSuccessful() && task.getResult() != null) {
+                                DocumentSnapshot doc = task.getResult();
+                                if (doc.exists()) {
+                                    Moment moment = doc.toObject(Moment.class);
+                                    if (moment != null) {
+                                        if (moment.getMomentId() == null || moment.getMomentId().isEmpty()) {
+                                            moment.setMomentId(doc.getId());
+                                        }
+                                        receivedMoments.add(moment);
+                                    }
+                                }
+                            }
+                        }
+                        callback.onSuccess(receivedMoments);
+                    });
+                })
+                .addOnFailureListener(e -> callback.onError(e));
     }
 }

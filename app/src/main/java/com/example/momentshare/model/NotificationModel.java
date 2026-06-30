@@ -4,6 +4,13 @@ import com.google.firebase.Timestamp;
 
 /**
  * NotificationModel đại diện cho thông báo trong ứng dụng.
+ *
+ * Đã chỉnh:
+ * - Thêm targetId để thông báo biết cần mở màn hình nào/dữ liệu nào.
+ *   Ví dụ:
+ *   + reaction: targetId = momentId
+ *   + moment: targetId = momentId
+ *   + friend_request: targetId = senderId
  */
 public class NotificationModel {
 
@@ -14,6 +21,7 @@ public class NotificationModel {
     private String message;
     private boolean isRead;
     private Timestamp createdAt;
+    private String targetId;
 
     public NotificationModel() {
     }
@@ -28,6 +36,7 @@ public class NotificationModel {
         this.message = message;
         this.isRead = isRead;
         this.createdAt = createdAt;
+        this.targetId = "";
     }
 
     public String getNotificationId() {
@@ -84,5 +93,13 @@ public class NotificationModel {
 
     public void setCreatedAt(Timestamp createdAt) {
         this.createdAt = createdAt;
+    }
+
+    public String getTargetId() {
+        return targetId;
+    }
+
+    public void setTargetId(String targetId) {
+        this.targetId = targetId;
     }
 }

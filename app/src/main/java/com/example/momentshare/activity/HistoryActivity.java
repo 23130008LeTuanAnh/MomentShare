@@ -9,17 +9,15 @@ import androidx.recyclerview.widget.GridLayoutManager;
 import androidx.recyclerview.widget.RecyclerView;
 
 import com.example.momentshare.R;
-import com.example.momentshare.activity.HomeFeedActivity;
-import com.example.momentshare.activity.MomentDetailActivity;
 import com.example.momentshare.model.Moment;
 import com.example.momentshare.repository.MomentRepository;
 import com.google.firebase.auth.FirebaseAuth;
 
-// import com.google.firebase.auth.FirebaseAuth;
-
 import java.util.ArrayList;
 import java.util.Collections;
+import java.util.HashSet;
 import java.util.List;
+import java.util.Set;
 
 public class HistoryActivity extends AppCompatActivity implements HistoryAdapter.OnItemClickListener {
 
@@ -42,60 +40,73 @@ public class HistoryActivity extends AppCompatActivity implements HistoryAdapter
         setContentView(R.layout.activity_history);
 
         ImageButton btnBack = findViewById(R.id.btnBackHistory);
-        RecyclerView rvHistory = findViewById(R.id.rvHistory);
-
         btnBack.setOnClickListener(v -> finish());
+
+        RecyclerView rvHistory = findViewById(R.id.rvHistory);
+        rvHistory.setLayoutManager(new GridLayoutManager(this, 3));
+        historyAdapter = new HistoryAdapter(historyMoments, this);
+        rvHistory.setAdapter(historyAdapter);
 
         momentRepository = new MomentRepository(this);
 
-        // Khởi tạo Adapter với danh sách rỗng ban đầu
-        historyAdapter = new HistoryAdapter(historyMoments, this);
-        rvHistory.setLayoutManager(new GridLayoutManager(this, 2));
-        rvHistory.setHasFixedSize(true);
-        rvHistory.setAdapter(historyAdapter);
-
-        loadRealHistory();
+        loadHistoryMoments();
     }
 
-    private void loadRealHistory() {
-        // Kéo danh sách ảnh ĐÃ GỬI
-        momentRepository.getSentHistory(currentUserId, new MomentRepository.MomentListCallback() {
+    private void loadHistoryMoments() {
+        momentRepository.getMomentsSentByUser(currentUserId, new MomentRepository.MomentListCallback() {
             @Override
             public void onSuccess(List<Moment> sentMoments) {
-                // Khi lấy ảnh đã gửi thành công, kéo tiếp danh sách ảnh ĐÃ NHẬN
-                momentRepository.getReceivedHistory(currentUserId, new MomentRepository.MomentListCallback() {
+                historyMoments.clear();
+                historyMoments.addAll(sentMoments);
+
+                momentRepository.getMomentsReceivedByUser(currentUserId, new MomentRepository.MomentListCallback() {
                     @Override
                     public void onSuccess(List<Moment> receivedMoments) {
-                        // Xóa dữ liệu cũ và gộp cả 2 danh sách lại
-                        historyMoments.clear();
-                        historyMoments.addAll(sentMoments);
                         historyMoments.addAll(receivedMoments);
-
-                        // Sắp xếp danh sách chung theo thời gian mới nhất lên đầu
-                        Collections.sort(historyMoments, (m1, m2) -> {
-                            if (m1.getCreatedAt() == null || m2.getCreatedAt() == null) return 0;
-                            return m2.getCreatedAt().compareTo(m1.getCreatedAt()); // Giảm dần
-                        });
-
-                        historyAdapter.notifyDataSetChanged();
-
-                        if (historyMoments.isEmpty()) {
-                            Toast.makeText(HistoryActivity.this, "Bạn chưa có khoảnh khắc nào!", Toast.LENGTH_SHORT).show();
-                        }
+                        updateUI();
                     }
 
                     @Override
                     public void onError(Exception exception) {
-                        Toast.makeText(HistoryActivity.this, "Lỗi tải ảnh đã nhận: " + exception.getMessage(), Toast.LENGTH_SHORT).show();
+                        Toast.makeText(HistoryActivity.this, "Không thể tải ảnh đã nhận", Toast.LENGTH_SHORT).show();
+                        // QUAN TRỌNG: Vẫn phải đẩy dữ liệu "ảnh đã gửi" lên màn hình kể cả khi ảnh nhận bị lỗi
+                        updateUI();
                     }
                 });
             }
 
             @Override
             public void onError(Exception exception) {
-                Toast.makeText(HistoryActivity.this, "Lỗi tải ảnh đã gửi: " + exception.getMessage(), Toast.LENGTH_SHORT).show();
+                Toast.makeText(HistoryActivity.this, "Lỗi tải lịch sử ảnh: " + exception.getMessage(), Toast.LENGTH_SHORT).show();
             }
         });
+    }
+
+    // Tách riêng luồng xử lý giao diện ra để code an toàn và tránh nhân bản dữ liệu
+    private void updateUI() {
+        // 1. Loại bỏ các ảnh bị trùng lặp (nếu một ảnh vừa nằm trong danh sách gửi và nhận)
+        Set<String> uniqueIds = new HashSet<>();
+        List<Moment> uniqueMoments = new ArrayList<>();
+        for (Moment m : historyMoments) {
+            if (m.getMomentId() != null && !uniqueIds.contains(m.getMomentId())) {
+                uniqueIds.add(m.getMomentId());
+                uniqueMoments.add(m);
+            }
+        }
+        historyMoments.clear();
+        historyMoments.addAll(uniqueMoments);
+
+        // 2. Sắp xếp lại theo thời gian mới nhất lên trên
+        Collections.sort(historyMoments, (m1, m2) -> {
+            if (m1.getCreatedAt() == null || m2.getCreatedAt() == null) return 0;
+            return m2.getCreatedAt().compareTo(m1.getCreatedAt());
+        });
+
+        historyAdapter.notifyDataSetChanged();
+
+        if (historyMoments.isEmpty()) {
+            Toast.makeText(HistoryActivity.this, "Bạn chưa có khoảnh khắc nào!", Toast.LENGTH_SHORT).show();
+        }
     }
 
     @Override

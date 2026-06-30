@@ -1,5 +1,6 @@
 package com.example.momentshare.activity;
 
+import android.content.Intent;
 import android.os.Bundle;
 import android.view.View;
 import android.widget.ArrayAdapter;
@@ -12,15 +13,23 @@ import android.widget.Toast;
 import androidx.appcompat.app.AppCompatActivity;
 
 import com.example.momentshare.R;
+import com.example.momentshare.model.Moment;
 import com.example.momentshare.model.NotificationModel;
 import com.example.momentshare.repository.AuthManager;
+import com.example.momentshare.repository.MomentRepository;
 import com.example.momentshare.repository.NotificationRepository;
+import com.example.momentshare.util.Constants;
 
 import java.util.ArrayList;
 import java.util.List;
 
 /**
- * NotificationActivity hiển thị danh sách thông báo trong app cho người dùng hiện tại.
+ * NotificationActivity hiển thị thông báo trong app.
+ *
+ * Đã chỉnh:
+ * - Bấm thông báo friend_request mở đúng FriendRequestActivity.
+ * - Bấm notification reaction/moment có targetId sẽ mở MomentDetailActivity.
+ * - Vẫn điều hướng được kể cả notification đã đọc.
  */
 public class NotificationActivity extends AppCompatActivity {
 
@@ -31,6 +40,7 @@ public class NotificationActivity extends AppCompatActivity {
 
     private AuthManager authManager;
     private NotificationRepository notificationRepository;
+    private MomentRepository momentRepository;
 
     private final List<NotificationModel> notifications = new ArrayList<>();
     private ArrayAdapter<String> adapter;
@@ -43,6 +53,7 @@ public class NotificationActivity extends AppCompatActivity {
 
         authManager = new AuthManager();
         notificationRepository = new NotificationRepository();
+        momentRepository = new MomentRepository(this);
 
         initViews();
         loadNotifications();
@@ -58,7 +69,7 @@ public class NotificationActivity extends AppCompatActivity {
 
         adapter = new ArrayAdapter<>(this, android.R.layout.simple_list_item_1, new ArrayList<>());
         listNotifications.setAdapter(adapter);
-        listNotifications.setOnItemClickListener((parent, view, position, id) -> markOneAsRead(notifications.get(position)));
+        listNotifications.setOnItemClickListener((parent, view, position, id) -> handleNotificationClick(notifications.get(position)));
         btnMarkAllRead.setOnClickListener(v -> markAllAsRead());
     }
 
@@ -89,42 +100,80 @@ public class NotificationActivity extends AppCompatActivity {
 
     private void renderNotifications() {
         adapter.clear();
-
         for (NotificationModel notification : notifications) {
             String readPrefix = notification.isRead() ? "Đã đọc" : "Mới";
             adapter.add(readPrefix + " - " + safeText(notification.getTitle(), "Thông báo")
                     + "\n" + safeText(notification.getMessage(), "Không có nội dung"));
         }
-
         adapter.notifyDataSetChanged();
         txtEmptyNotifications.setVisibility(notifications.isEmpty() ? View.VISIBLE : View.GONE);
     }
 
-    private void markOneAsRead(NotificationModel notification) {
-        if (notification.isRead()) {
+    private void handleNotificationClick(NotificationModel notification) {
+        if (notification == null) return;
+
+        if (!notification.isRead()) {
+            notificationRepository.markAsRead(notification.getNotificationId(), new NotificationRepository.ActionCallback() {
+                @Override
+                public void onSuccess() {
+                    notification.setRead(true);
+                    renderNotifications();
+                }
+
+                @Override
+                public void onFailure(String errorMessage) { }
+            });
+        }
+
+        navigateByNotification(notification);
+    }
+
+    private void navigateByNotification(NotificationModel notification) {
+        String type = safeText(notification.getType(), "");
+        String targetId = safeText(notification.getTargetId(), "");
+
+        if (Constants.NOTIFICATION_TYPE_FRIEND_REQUEST.equals(type)) {
+            Intent intent = new Intent(this, FriendRequestActivity.class);
+            if (!targetId.isEmpty()) {
+                intent.putExtra(FriendRequestActivity.EXTRA_FILTER_SENDER_ID, targetId);
+            }
+            startActivity(intent);
             return;
         }
 
+        if ((Constants.NOTIFICATION_TYPE_REACTION.equals(type)
+                || Constants.NOTIFICATION_TYPE_MOMENT.equals(type))
+                && !targetId.isEmpty()) {
+            openMomentDetail(targetId);
+        }
+    }
+
+    private void openMomentDetail(String momentId) {
         setLoading(true);
-        notificationRepository.markAsRead(notification.getNotificationId(), new NotificationRepository.ActionCallback() {
+        momentRepository.getMomentById(momentId, new MomentRepository.MomentCallback() {
             @Override
-            public void onSuccess() {
+            public void onSuccess(Moment moment) {
                 setLoading(false);
-                loadNotifications();
+                if (moment == null) {
+                    Toast.makeText(NotificationActivity.this, "Khoảnh khắc không còn tồn tại", Toast.LENGTH_SHORT).show();
+                    return;
+                }
+
+                Intent intent = new Intent(NotificationActivity.this, MomentDetailActivity.class);
+                HomeFeedActivity.putMomentExtras(intent, moment);
+                startActivity(intent);
             }
 
             @Override
-            public void onFailure(String errorMessage) {
+            public void onError(Exception exception) {
                 setLoading(false);
-                Toast.makeText(NotificationActivity.this, errorMessage, Toast.LENGTH_SHORT).show();
+                Toast.makeText(NotificationActivity.this, "Không mở được khoảnh khắc", Toast.LENGTH_SHORT).show();
             }
         });
     }
 
     private void markAllAsRead() {
-        if (currentUserId == null) {
-            return;
-        }
+        if (currentUserId == null) return;
 
         setLoading(true);
         notificationRepository.markAllAsRead(currentUserId, new NotificationRepository.ActionCallback() {

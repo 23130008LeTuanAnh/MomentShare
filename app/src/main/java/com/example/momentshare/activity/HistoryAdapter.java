@@ -37,12 +37,16 @@ public class HistoryAdapter extends RecyclerView.Adapter<HistoryAdapter.HistoryV
     public void onBindViewHolder(@NonNull HistoryViewHolder holder, int position) {
         Moment moment = historyList.get(position);
 
-        // Ô lịch sử chỉ hiển thị ảnh thu nhỏ được cắt vừa vặn
+        // Xử lý nạp ảnh an toàn, có ảnh giữ chỗ (placeholder) để View không bị sập chiều cao
         if (moment.getImageUrl() != null && !moment.getImageUrl().isEmpty()) {
             Glide.with(holder.itemView.getContext())
                     .load(moment.getImageUrl())
+                    .placeholder(R.drawable.ic_launcher_background)
+                    .error(R.drawable.ic_launcher_background)
                     .centerCrop()
                     .into(holder.imgHistoryMoment);
+        } else {
+            holder.imgHistoryMoment.setImageResource(R.drawable.ic_launcher_background);
         }
 
         holder.itemView.setOnClickListener(v -> {

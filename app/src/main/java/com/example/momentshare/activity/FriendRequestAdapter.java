@@ -21,6 +21,13 @@ import com.example.momentshare.repository.UserRepository;
 
 import java.util.List;
 
+/**
+ * FriendRequestAdapter hiển thị item lời mời kết bạn.
+ *
+ * Đã chỉnh:
+ * - Không để item trắng khi chưa tải được user.
+ * - Chấp nhận/từ chối đúng item hiện tại của RecyclerView.
+ */
 public class FriendRequestAdapter extends RecyclerView.Adapter<FriendRequestAdapter.RequestViewHolder> {
 
     private final Context context;
@@ -46,13 +53,27 @@ public class FriendRequestAdapter extends RecyclerView.Adapter<FriendRequestAdap
     public void onBindViewHolder(@NonNull RequestViewHolder holder, int position) {
         FriendRequest request = requestList.get(position);
 
+        holder.txtName.setText("Đang tải...");
+        holder.txtUsername.setText("");
+        holder.imgAvatar.setImageResource(R.mipmap.ic_launcher);
+
         userRepository.getUserById(request.getSenderId(), new UserRepository.UserCallback() {
             @Override
             public void onSuccess(User user) {
-                holder.txtName.setText(user.getFullName());
-                holder.txtUsername.setText("@" + user.getUsername());
-                if (user.getAvatarUrl() != null && !user.getAvatarUrl().isEmpty()) {
-                    Glide.with(context).load(user.getAvatarUrl()).circleCrop().into(holder.imgAvatar);
+                String fullName = user == null ? "" : user.getFullName();
+                String username = user == null ? "" : user.getUsername();
+
+                holder.txtName.setText(safeText(fullName, "Người dùng MomentShare"));
+                holder.txtUsername.setText("@" + safeText(username, "unknown"));
+
+                String avatarUrl = user == null ? "" : user.getAvatarUrl();
+                if (avatarUrl != null && !avatarUrl.trim().isEmpty()) {
+                    Glide.with(context)
+                            .load(avatarUrl)
+                            .circleCrop()
+                            .placeholder(R.mipmap.ic_launcher)
+                            .error(R.mipmap.ic_launcher)
+                            .into(holder.imgAvatar);
                 } else {
                     holder.imgAvatar.setImageResource(R.mipmap.ic_launcher);
                 }
@@ -60,37 +81,49 @@ public class FriendRequestAdapter extends RecyclerView.Adapter<FriendRequestAdap
 
             @Override
             public void onFailure(String errorMessage) {
+                holder.txtName.setText("Người dùng MomentShare");
+                holder.txtUsername.setText("ID: " + safeText(request.getSenderId(), "unknown"));
+                holder.imgAvatar.setImageResource(R.mipmap.ic_launcher);
             }
         });
 
         holder.btnAccept.setOnClickListener(v -> {
             int currentPos = holder.getAdapterPosition();
             if (currentPos == RecyclerView.NO_POSITION) return;
-            
-            friendRepository.acceptFriendRequest(request.getRequestId(), request.getSenderId(), request.getReceiverId(), new FriendRepository.ActionCallback() {
-                @Override
-                public void onSuccess() {
-                    requestList.remove(currentPos);
-                    notifyItemRemoved(currentPos);
-                    Toast.makeText(context, "Đã chấp nhận kết bạn", Toast.LENGTH_SHORT).show();
-                }
 
-                @Override
-                public void onFailure(String errorMessage) {
-                    Toast.makeText(context, "Lỗi: " + errorMessage, Toast.LENGTH_SHORT).show();
-                }
-            });
+            FriendRequest currentRequest = requestList.get(currentPos);
+            friendRepository.acceptFriendRequest(
+                    currentRequest.getRequestId(),
+                    currentRequest.getSenderId(),
+                    currentRequest.getReceiverId(),
+                    new FriendRepository.ActionCallback() {
+                        @Override
+                        public void onSuccess() {
+                            requestList.remove(currentPos);
+                            notifyItemRemoved(currentPos);
+                            notifyItemRangeChanged(currentPos, requestList.size());
+                            Toast.makeText(context, "Đã chấp nhận kết bạn", Toast.LENGTH_SHORT).show();
+                        }
+
+                        @Override
+                        public void onFailure(String errorMessage) {
+                            Toast.makeText(context, "Lỗi: " + errorMessage, Toast.LENGTH_SHORT).show();
+                        }
+                    }
+            );
         });
 
         holder.btnReject.setOnClickListener(v -> {
             int currentPos = holder.getAdapterPosition();
             if (currentPos == RecyclerView.NO_POSITION) return;
 
-            friendRepository.rejectFriendRequest(request.getRequestId(), new FriendRepository.ActionCallback() {
+            FriendRequest currentRequest = requestList.get(currentPos);
+            friendRepository.rejectFriendRequest(currentRequest.getRequestId(), new FriendRepository.ActionCallback() {
                 @Override
                 public void onSuccess() {
                     requestList.remove(currentPos);
                     notifyItemRemoved(currentPos);
+                    notifyItemRangeChanged(currentPos, requestList.size());
                     Toast.makeText(context, "Đã từ chối lời mời", Toast.LENGTH_SHORT).show();
                 }
 
@@ -104,7 +137,11 @@ public class FriendRequestAdapter extends RecyclerView.Adapter<FriendRequestAdap
 
     @Override
     public int getItemCount() {
-        return requestList.size();
+        return requestList == null ? 0 : requestList.size();
+    }
+
+    private String safeText(String value, String fallback) {
+        return value == null || value.trim().isEmpty() ? fallback : value.trim();
     }
 
     public static class RequestViewHolder extends RecyclerView.ViewHolder {

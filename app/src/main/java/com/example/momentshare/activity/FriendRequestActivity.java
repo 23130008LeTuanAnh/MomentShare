@@ -19,7 +19,16 @@ import com.google.firebase.auth.FirebaseAuth;
 import java.util.ArrayList;
 import java.util.List;
 
+/**
+ * FriendRequestActivity hiển thị lời mời kết bạn đang chờ.
+ *
+ * Đã chỉnh:
+ * - Tự reload trong onResume().
+ * - Nhận EXTRA_FILTER_SENDER_ID từ nút Phản hồi/thông báo để lọc đúng người đã gửi lời mời.
+ */
 public class FriendRequestActivity extends AppCompatActivity {
+
+    public static final String EXTRA_FILTER_SENDER_ID = "extra_filter_sender_id";
 
     private ImageButton btnBack;
     private ProgressBar progressBar;
@@ -30,15 +39,22 @@ public class FriendRequestActivity extends AppCompatActivity {
     private final List<FriendRequest> requestList = new ArrayList<>();
     private FriendRepository friendRepository;
     private String currentUserId;
+    private String filterSenderId = "";
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
         setContentView(R.layout.activity_friend_request);
 
-        currentUserId = FirebaseAuth.getInstance().getCurrentUser() != null ?
-                FirebaseAuth.getInstance().getCurrentUser().getUid() : "";
-        
+        currentUserId = FirebaseAuth.getInstance().getCurrentUser() != null
+                ? FirebaseAuth.getInstance().getCurrentUser().getUid()
+                : "";
+
+        filterSenderId = getIntent().getStringExtra(EXTRA_FILTER_SENDER_ID);
+        if (filterSenderId == null) {
+            filterSenderId = "";
+        }
+
         if (currentUserId.isEmpty()) {
             finish();
             return;
@@ -46,6 +62,11 @@ public class FriendRequestActivity extends AppCompatActivity {
 
         friendRepository = new FriendRepository();
         initViews();
+    }
+
+    @Override
+    protected void onResume() {
+        super.onResume();
         loadRequests();
     }
 
@@ -69,19 +90,22 @@ public class FriendRequestActivity extends AppCompatActivity {
             public void onSuccess(List<FriendRequest> requests) {
                 setLoading(false);
                 requestList.clear();
-                requestList.addAll(requests);
-                adapter.notifyDataSetChanged();
 
-                if (requests.isEmpty()) {
-                    txtNoRequest.setVisibility(View.VISIBLE);
-                } else {
-                    txtNoRequest.setVisibility(View.GONE);
+                for (FriendRequest request : requests) {
+                    if (filterSenderId.trim().isEmpty()
+                            || filterSenderId.equals(request.getSenderId())) {
+                        requestList.add(request);
+                    }
                 }
+
+                adapter.notifyDataSetChanged();
+                txtNoRequest.setVisibility(requestList.isEmpty() ? View.VISIBLE : View.GONE);
             }
 
             @Override
             public void onFailure(String errorMessage) {
                 setLoading(false);
+                txtNoRequest.setVisibility(View.VISIBLE);
                 Toast.makeText(FriendRequestActivity.this, "Lỗi: " + errorMessage, Toast.LENGTH_SHORT).show();
             }
         });
@@ -90,6 +114,8 @@ public class FriendRequestActivity extends AppCompatActivity {
     private void setLoading(boolean isLoading) {
         progressBar.setVisibility(isLoading ? View.VISIBLE : View.GONE);
         rvRequest.setVisibility(isLoading ? View.GONE : View.VISIBLE);
-        txtNoRequest.setVisibility(View.GONE);
+        if (isLoading) {
+            txtNoRequest.setVisibility(View.GONE);
+        }
     }
 }

@@ -17,6 +17,7 @@ import com.example.momentshare.model.User;
 import com.example.momentshare.repository.AuthManager;
 import com.example.momentshare.repository.FriendRepository;
 import com.example.momentshare.repository.MomentRepository;
+import com.example.momentshare.repository.NotificationRepository;
 import com.example.momentshare.repository.UserRepository;
 import com.example.momentshare.util.Constants;
 import com.example.momentshare.util.ValidationUtils;
@@ -24,21 +25,12 @@ import com.example.momentshare.util.ValidationUtils;
 import java.util.List;
 
 /**
- * ProfileActivity hiển thị hồ sơ cá nhân của người dùng.
+ * ProfileActivity hiển thị hồ sơ cá nhân.
  *
- * File này thuộc phần Người 1 - Tài khoản, hồ sơ cá nhân.
- * Người 5 chỉ bổ sung lối vào màn hình thông báo và khu vực quản trị, không thay đổi luồng hồ sơ gốc.
- *
- * Chức năng chính:
- * - Kiểm tra người dùng đã đăng nhập hay chưa.
- * - Lấy userId hiện tại từ Firebase Authentication.
- * - Tải dữ liệu người dùng từ Firestore collection users.
- * - Hiển thị avatar, họ tên, username, email, bio.
- * - Hiển thị thống kê cơ bản: số bạn bè, số ảnh đã gửi, số ảnh đã nhận.
- * - Chuyển sang EditProfileActivity để chỉnh sửa hồ sơ.
- * - Mở NotificationActivity để người dùng xem thông báo trong app. // Người 5 thêm
- * - Hiển thị nút Admin Dashboard nếu tài khoản hiện tại có role ADMIN. // Người 5 thêm
- * - Đăng xuất tài khoản hiện tại.
+ * Đã chỉnh:
+ * - Hiển thị số thông báo chưa đọc trên nút Thông báo.
+ * - Hiển thị số lời mời kết bạn đang chờ trên nút Lời mời kết bạn.
+ * - Tự cập nhật lại badge trong onResume().
  */
 public class ProfileActivity extends AppCompatActivity {
 
@@ -54,48 +46,41 @@ public class ProfileActivity extends AppCompatActivity {
 
     private Button btnEditProfile;
     private Button btnHomeFeed;
-    private Button btnNotification; // Người 5 thêm: nút mở danh sách thông báo.
-    private Button btnFriendList; // Người 2 thêm
-    private Button btnFriendRequests; // Người 2 thêm
-    private Button btnAdminDashboard; // Người 5 thêm: nút vào khu vực quản trị cho tài khoản ADMIN.
+    private Button btnNotification;
+    private Button btnFriendList;
+    private Button btnFriendRequests;
+    private Button btnAdminDashboard;
     private Button btnLogout;
 
     private AuthManager authManager;
     private UserRepository userRepository;
-    private MomentRepository momentRepository; // Người 1 thực hiện: repository dùng để đếm ảnh gửi/nhận thật trên Profile.
+    private MomentRepository momentRepository;
+    private NotificationRepository notificationRepository;
+    private FriendRepository friendRepository;
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
         setContentView(R.layout.activity_profile);
 
-        // AuthManager dùng để kiểm tra đăng nhập và đăng xuất.
         authManager = new AuthManager();
-
-        // UserRepository dùng để tải dữ liệu hồ sơ từ Firestore.
         userRepository = new UserRepository();
-
-        // Người 1 thực hiện: MomentRepository dùng để đếm số ảnh đã gửi/đã nhận thật trên Firestore.
         momentRepository = new MomentRepository(this);
+        notificationRepository = new NotificationRepository();
+        friendRepository = new FriendRepository();
 
         initViews();
         setupEvents();
 
-        // Người 5 thực hiện: đăng ký FCM token thật cho thiết bị sau khi người dùng đã đăng nhập.
         new FcmTokenManager().registerCurrentUserDevice(this);
     }
 
     @Override
     protected void onResume() {
         super.onResume();
-
-        // Mỗi lần quay lại ProfileActivity, tải lại hồ sơ để cập nhật dữ liệu mới nhất.
         loadUserProfile();
     }
 
-    /**
-     * Ánh xạ các view từ file activity_profile.xml.
-     */
     private void initViews() {
         imgAvatar = findViewById(R.id.imgAvatar);
 
@@ -109,63 +94,23 @@ public class ProfileActivity extends AppCompatActivity {
 
         btnEditProfile = findViewById(R.id.btnEditProfile);
         btnHomeFeed = findViewById(R.id.btnHomeFeed);
-        btnNotification = findViewById(R.id.btnNotification); // Người 5 thêm
-        btnFriendList = findViewById(R.id.btnFriendList); // Người 2 thêm
-        btnFriendRequests = findViewById(R.id.btnFriendRequests); // Người 2 thêm
-        btnAdminDashboard = findViewById(R.id.btnAdminDashboard); // Người 5 thêm
+        btnNotification = findViewById(R.id.btnNotification);
+        btnFriendList = findViewById(R.id.btnFriendList);
+        btnFriendRequests = findViewById(R.id.btnFriendRequests);
+        btnAdminDashboard = findViewById(R.id.btnAdminDashboard);
         btnLogout = findViewById(R.id.btnLogout);
     }
 
-    /**
-     * Khai báo sự kiện cho màn hình hồ sơ.
-     */
     private void setupEvents() {
-        btnEditProfile.setOnClickListener(v -> {
-            Intent intent = new Intent(ProfileActivity.this, EditProfileActivity.class);
-            startActivity(intent);
-        });
-
-        btnHomeFeed.setOnClickListener(v -> {
-            Intent intent = new Intent(ProfileActivity.this, HomeFeedActivity.class);
-            startActivity(intent);
-        });
-
-        // Người 5 thêm: mở màn hình thông báo cá nhân.
-        btnNotification.setOnClickListener(v -> {
-            Intent intent = new Intent(ProfileActivity.this, NotificationActivity.class);
-            startActivity(intent);
-        });
-
-        // Người 5 thêm: mở trang quản trị, Activity bên trong sẽ kiểm tra lại quyền ADMIN.
-        btnAdminDashboard.setOnClickListener(v -> {
-            Intent intent = new Intent(ProfileActivity.this, AdminDashboardActivity.class);
-            startActivity(intent);
-        });
-
-        // Người 2 thêm
-        btnFriendList.setOnClickListener(v -> {
-            Intent intent = new Intent(ProfileActivity.this, FriendListActivity.class);
-            startActivity(intent);
-        });
-
-        btnFriendRequests.setOnClickListener(v -> {
-            Intent intent = new Intent(ProfileActivity.this, FriendRequestActivity.class);
-            startActivity(intent);
-        });
-
+        btnEditProfile.setOnClickListener(v -> startActivity(new Intent(ProfileActivity.this, EditProfileActivity.class)));
+        btnHomeFeed.setOnClickListener(v -> startActivity(new Intent(ProfileActivity.this, HomeFeedActivity.class)));
+        btnNotification.setOnClickListener(v -> startActivity(new Intent(ProfileActivity.this, NotificationActivity.class)));
+        btnAdminDashboard.setOnClickListener(v -> startActivity(new Intent(ProfileActivity.this, AdminDashboardActivity.class)));
+        btnFriendList.setOnClickListener(v -> startActivity(new Intent(ProfileActivity.this, FriendListActivity.class)));
+        btnFriendRequests.setOnClickListener(v -> startActivity(new Intent(ProfileActivity.this, FriendRequestActivity.class)));
         btnLogout.setOnClickListener(v -> handleLogout());
     }
 
-    /**
-     * Tải hồ sơ người dùng hiện tại từ Firestore.
-     *
-     * Quy trình:
-     * 1. Kiểm tra FirebaseAuth có currentUser hay không.
-     * 2. Lấy userId hiện tại.
-     * 3. Gọi UserRepository.getUserById().
-     * 4. Nếu thành công, hiển thị dữ liệu lên giao diện.
-     * 5. Nếu thất bại, báo lỗi và quay lại LoginActivity.
-     */
     private void loadUserProfile() {
         if (!authManager.isLoggedIn()) {
             navigateToLogin();
@@ -173,7 +118,6 @@ public class ProfileActivity extends AppCompatActivity {
         }
 
         String currentUserId = authManager.getCurrentUserId();
-
         if (ValidationUtils.isEmpty(currentUserId)) {
             Toast.makeText(this, "Không thể xác định tài khoản hiện tại", Toast.LENGTH_SHORT).show();
             navigateToLogin();
@@ -181,6 +125,7 @@ public class ProfileActivity extends AppCompatActivity {
         }
 
         showLoadingText();
+        loadBadgeCounts(currentUserId);
 
         userRepository.getUserById(currentUserId, new UserRepository.UserCallback() {
             @Override
@@ -191,19 +136,12 @@ public class ProfileActivity extends AppCompatActivity {
             @Override
             public void onFailure(String errorMessage) {
                 Toast.makeText(ProfileActivity.this, errorMessage, Toast.LENGTH_SHORT).show();
-
-                // Nếu không tải được hồ sơ thì đăng xuất để tránh app ở trạng thái không hợp lệ.
                 authManager.logout();
                 navigateToLogin();
             }
         });
     }
 
-    /**
-     * Hiển thị dữ liệu người dùng lên màn hình Profile.
-     *
-     * @param user dữ liệu người dùng lấy từ Firestore
-     */
     private void displayUserProfile(User user) {
         String fullName = user.getFullName();
         String username = user.getUsername();
@@ -216,8 +154,6 @@ public class ProfileActivity extends AppCompatActivity {
         txtEmail.setText(ValidationUtils.isEmpty(email) ? "Chưa có email" : email);
         txtBio.setText(ValidationUtils.isEmpty(bio) ? "Chưa có mô tả cá nhân" : bio);
 
-        // Hiển thị avatar từ Firestore avatarUrl.
-        // Nếu người dùng chưa có avatarUrl thì hiển thị icon mặc định.
         if (!ValidationUtils.isEmpty(avatarUrl)) {
             Glide.with(ProfileActivity.this)
                     .load(avatarUrl)
@@ -229,21 +165,39 @@ public class ProfileActivity extends AppCompatActivity {
             imgAvatar.setImageResource(R.mipmap.ic_launcher);
         }
 
-        // Người 5 thêm: chỉ hiện nút Admin Dashboard cho tài khoản có role ADMIN.
         btnAdminDashboard.setVisibility(Constants.ROLE_ADMIN.equals(user.getRole()) ? View.VISIBLE : View.GONE);
-
-        // Người 1 thực hiện: sau khi hiển thị hồ sơ, tải thống kê thật thay vì dùng số 0 cố định.
         loadProfileStatistics(user.getUserId());
     }
 
-    /**
-     * Người 1 thực hiện: tải các chỉ số thật của hồ sơ từ Firestore.
-     *
-     * Bao gồm:
-     * - Số bạn bè đã kết nối.
-     * - Số ảnh người dùng đã gửi.
-     * - Số ảnh người dùng đã nhận.
-     */
+    private void loadBadgeCounts(String userId) {
+        btnNotification.setText("Thông báo");
+        btnFriendRequests.setText("Lời mời kết bạn");
+
+        notificationRepository.countUnreadNotifications(userId, new NotificationRepository.CountCallback() {
+            @Override
+            public void onSuccess(int count) {
+                btnNotification.setText(count > 0 ? "Thông báo (" + count + ")" : "Thông báo");
+            }
+
+            @Override
+            public void onFailure(String errorMessage) {
+                btnNotification.setText("Thông báo");
+            }
+        });
+
+        friendRepository.countPendingRequests(userId, new FriendRepository.CountCallback() {
+            @Override
+            public void onSuccess(int count) {
+                btnFriendRequests.setText(count > 0 ? "Lời mời kết bạn (" + count + ")" : "Lời mời kết bạn");
+            }
+
+            @Override
+            public void onFailure(String errorMessage) {
+                btnFriendRequests.setText("Lời mời kết bạn");
+            }
+        });
+    }
+
     private void loadProfileStatistics(String userId) {
         if (ValidationUtils.isEmpty(userId)) {
             txtFriendCount.setText("0 bạn bè");
@@ -252,7 +206,7 @@ public class ProfileActivity extends AppCompatActivity {
             return;
         }
 
-        new FriendRepository().getFriendList(userId, new FriendRepository.UserListCallback() {
+        friendRepository.getFriendList(userId, new FriendRepository.UserListCallback() {
             @Override
             public void onSuccess(List<User> users) {
                 txtFriendCount.setText(users.size() + " bạn bè");
@@ -264,7 +218,6 @@ public class ProfileActivity extends AppCompatActivity {
             }
         });
 
-        // Người 1 thực hiện: đếm số ảnh đã gửi thật từ collection moments.
         momentRepository.countSentMoments(userId, new MomentRepository.CountCallback() {
             @Override
             public void onSuccess(long count) {
@@ -277,7 +230,6 @@ public class ProfileActivity extends AppCompatActivity {
             }
         });
 
-        // Người 1 thực hiện: đếm số ảnh đã nhận thật từ collection moment_receivers.
         momentRepository.countReceivedMoments(userId, new MomentRepository.CountCallback() {
             @Override
             public void onSuccess(long count) {
@@ -291,12 +243,8 @@ public class ProfileActivity extends AppCompatActivity {
         });
     }
 
-    /**
-     * Hiển thị trạng thái đang tải hồ sơ.
-     */
     private void showLoadingText() {
         imgAvatar.setImageResource(R.mipmap.ic_launcher);
-
         txtFullName.setText("Đang tải hồ sơ...");
         txtUsername.setText("@...");
         txtEmail.setText("...");
@@ -304,25 +252,15 @@ public class ProfileActivity extends AppCompatActivity {
         txtFriendCount.setText("0 bạn bè");
         txtSentCount.setText("0 ảnh đã gửi");
         txtReceivedCount.setText("0 ảnh đã nhận");
-
-        // Người 5 thêm: ẩn nút admin trong lúc chưa xác định được quyền của tài khoản.
         btnAdminDashboard.setVisibility(View.GONE);
     }
 
-    /**
-     * Xử lý đăng xuất tài khoản hiện tại.
-     */
     private void handleLogout() {
         authManager.logout();
-
         Toast.makeText(this, "Đăng xuất thành công", Toast.LENGTH_SHORT).show();
-
         navigateToLogin();
     }
 
-    /**
-     * Điều hướng về LoginActivity và xóa toàn bộ màn hình trước đó khỏi back stack.
-     */
     private void navigateToLogin() {
         Intent intent = new Intent(ProfileActivity.this, LoginActivity.class);
         intent.setFlags(Intent.FLAG_ACTIVITY_NEW_TASK | Intent.FLAG_ACTIVITY_CLEAR_TASK);
