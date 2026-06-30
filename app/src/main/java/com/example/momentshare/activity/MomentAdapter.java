@@ -6,22 +6,29 @@ import android.view.View;
 import android.view.ViewGroup;
 import android.widget.ImageView;
 import android.widget.TextView;
+
 import androidx.annotation.NonNull;
 import androidx.recyclerview.widget.RecyclerView;
+
 import com.bumptech.glide.Glide;
 import com.example.momentshare.R;
 import com.example.momentshare.model.Moment;
+import com.example.momentshare.model.User;
+import com.example.momentshare.repository.UserRepository;
+import com.example.momentshare.repository.ReactionRepository;
+
+import java.util.HashMap;
 import java.util.List;
+import java.util.Map;
 
 public class MomentAdapter extends RecyclerView.Adapter<MomentAdapter.MomentViewHolder> {
 
-    private Context context;
+    private final Context context;
     private List<Moment> momentList;
-    private OnMomentClickListener listener;
-
-    public interface OnItemClickListener {
-        void onItemClick(Moment moment);
-    }
+    private final OnMomentClickListener listener;
+    private final UserRepository userRepository = new UserRepository();
+    private final Map<String, User> userCache = new HashMap<>();
+    private final ReactionRepository reactionRepository = new ReactionRepository();
 
     public MomentAdapter(Context context, List<Moment> momentList, OnMomentClickListener listener) {
         this.context = context;
@@ -41,10 +48,25 @@ public class MomentAdapter extends RecyclerView.Adapter<MomentAdapter.MomentView
     public void onBindViewHolder(@NonNull MomentViewHolder holder, int position) {
         Moment moment = momentList.get(position);
 
-        holder.txtUsername.setText("Người gửi: " + moment.getSenderId());
-        holder.txtCaption.setText(moment.getCaption());
+        holder.txtUsername.setText("Đang tải...");
+        holder.txtCaption.setText(moment.getCaption() == null ? "" : moment.getCaption());
+        holder.imgAvatar.setImageResource(R.mipmap.ic_launcher);
+        holder.txtReactionCount.setText("0 reaction");
 
-        // Sử dụng thư viện Glide để tải ảnh từ URL vào ImageView
+        if (moment.getMomentId() != null && !moment.getMomentId().isEmpty()) {
+            reactionRepository.countReactionsForMoment(moment.getMomentId(), new ReactionRepository.ReactionCountCallback() {
+                @Override
+                public void onSuccess(int count) {
+                    holder.txtReactionCount.setText(count + (count == 1 ? " reaction" : " reactions"));
+                }
+
+                @Override
+                public void onError(Exception e) {
+                    holder.txtReactionCount.setText("0 reaction");
+                }
+            });
+        }
+
         if (moment.getImageUrl() != null && !moment.getImageUrl().isEmpty()) {
             Glide.with(holder.itemView.getContext())
                     .load(moment.getImageUrl())
@@ -52,7 +74,8 @@ public class MomentAdapter extends RecyclerView.Adapter<MomentAdapter.MomentView
                     .into(holder.imgMoment);
         }
 
-        // Bắt sự kiện click vào item
+        loadSenderInfo(holder, moment.getSenderId());
+
         holder.itemView.setOnClickListener(v -> {
             if (listener != null) {
                 listener.onMomentClick(moment);
@@ -60,12 +83,63 @@ public class MomentAdapter extends RecyclerView.Adapter<MomentAdapter.MomentView
         });
     }
 
+    private void loadSenderInfo(@NonNull MomentViewHolder holder, String senderId) {
+        if (senderId == null || senderId.trim().isEmpty()) {
+            holder.txtUsername.setText("Người dùng MomentShare");
+            return;
+        }
+
+        if (userCache.containsKey(senderId)) {
+            bindSender(holder, userCache.get(senderId));
+            return;
+        }
+
+        userRepository.getUserById(senderId, new UserRepository.UserCallback() {
+            @Override
+            public void onSuccess(User user) {
+                userCache.put(senderId, user);
+                bindSender(holder, user);
+            }
+
+            @Override
+            public void onFailure(String errorMessage) {
+                holder.txtUsername.setText("Người dùng MomentShare");
+            }
+        });
+    }
+
+    private void bindSender(@NonNull MomentViewHolder holder, User user) {
+        if (user == null) {
+            holder.txtUsername.setText("Người dùng MomentShare");
+            return;
+        }
+
+        String name = user.getFullName();
+        String username = user.getUsername();
+
+        if (name != null && !name.trim().isEmpty()) {
+            holder.txtUsername.setText(name);
+        } else if (username != null && !username.trim().isEmpty()) {
+            holder.txtUsername.setText("@" + username);
+        } else {
+            holder.txtUsername.setText("Người dùng MomentShare");
+        }
+
+        if (user.getAvatarUrl() != null && !user.getAvatarUrl().trim().isEmpty()) {
+            Glide.with(holder.itemView.getContext())
+                    .load(user.getAvatarUrl())
+                    .placeholder(R.mipmap.ic_launcher)
+                    .error(R.mipmap.ic_launcher)
+                    .circleCrop()
+                    .into(holder.imgAvatar);
+        }
+    }
+
     @Override
     public int getItemCount() {
         return momentList != null ? momentList.size() : 0;
     }
 
-    // Hàm cập nhật danh sách khi có dữ liệu mới từ Firebase
     public void updateData(List<Moment> newMoments) {
         this.momentList = newMoments;
         notifyDataSetChanged();
@@ -76,8 +150,8 @@ public class MomentAdapter extends RecyclerView.Adapter<MomentAdapter.MomentView
     }
 
     public static class MomentViewHolder extends RecyclerView.ViewHolder {
-        ImageView imgAvatar, imgMoment;
-        TextView txtUsername, txtCaption;
+        ImageView imgAvatar, imgMoment, imgReactionIcon;
+        TextView txtUsername, txtCaption, txtReactionCount;
 
         public MomentViewHolder(@NonNull View itemView) {
             super(itemView);
@@ -85,6 +159,8 @@ public class MomentAdapter extends RecyclerView.Adapter<MomentAdapter.MomentView
             txtUsername = itemView.findViewById(R.id.txtUsername);
             imgMoment = itemView.findViewById(R.id.imgMoment);
             txtCaption = itemView.findViewById(R.id.txtCaption);
+            imgReactionIcon = itemView.findViewById(R.id.imgReactionIcon);
+            txtReactionCount = itemView.findViewById(R.id.txtReactionCount);
         }
     }
 }
