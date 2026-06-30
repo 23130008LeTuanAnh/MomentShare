@@ -100,12 +100,13 @@ public class SelectFriendToSendActivity extends AppCompatActivity {
                 friendCandidates.clear();
                 friendCandidates.addAll(friends);
 
-                // NẾU CHƯA CÓ BẠN BÈ: Vẫn bật nút gửi để họ dùng tính năng ĐĂNG CÔNG KHAI
+                // Đề tài MomentShare là chia sẻ riêng tư giữa bạn bè thân thiết,
+                // nên nếu chưa có bạn bè thì không cho gửi công khai.
                 if (friendCandidates.isEmpty()) {
                     txtEmpty.setVisibility(View.VISIBLE);
                     listFriends.setVisibility(View.GONE);
-                    btnContinue.setEnabled(true);
-                    btnContinue.setText("Đăng công khai (Mọi người)");
+                    btnContinue.setEnabled(false);
+                    btnContinue.setText("Chưa có bạn bè để gửi");
                     return;
                 }
 
@@ -150,7 +151,7 @@ public class SelectFriendToSendActivity extends AppCompatActivity {
         }
 
         if (checkedCount == 0) {
-            btnContinue.setText("Đăng công khai (Mọi người)");
+            btnContinue.setText("Chọn bạn bè để gửi");
         } else {
             btnContinue.setText("Gửi khoảnh khắc (" + checkedCount + " bạn bè)");
         }
@@ -174,8 +175,11 @@ public class SelectFriendToSendActivity extends AppCompatActivity {
                 receiverIds.add(friendCandidates.get(i).getUserId());
             }
         }
-        
-        // Nếu receiverIds rỗng -> Firebase sẽ nhận một danh sách trống và hiểu đây là bài đăng công khai công cộng.
+
+        if (receiverIds.isEmpty()) {
+            showError("Vui lòng chọn ít nhất một bạn bè để gửi khoảnh khắc");
+            return;
+        }
 
         if (imageUri == null) {
             showError("Lỗi dữ liệu ảnh");
@@ -201,9 +205,9 @@ public class SelectFriendToSendActivity extends AppCompatActivity {
                     public void onSuccess(@NonNull String momentId) {
                         hideProgress();
 
-                        // Đưa ra thông báo tương ứng với phương thức gửi
-                        String message = receiverIds.isEmpty() ? "Đã đăng khoảnh khắc công khai!" : "Đã gửi khoảnh khắc đến bạn bè!";
-                        Toast.makeText(SelectFriendToSendActivity.this, message, Toast.LENGTH_SHORT).show();
+                        Toast.makeText(SelectFriendToSendActivity.this,
+                                "Đã gửi khoảnh khắc đến bạn bè!",
+                                Toast.LENGTH_SHORT).show();
 
                         // Điều hướng mượt mà về thẳng HomeFeedActivity
                         Intent intent = new Intent(SelectFriendToSendActivity.this, HomeFeedActivity.class);

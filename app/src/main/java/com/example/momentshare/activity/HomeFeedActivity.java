@@ -16,6 +16,7 @@ import com.example.momentshare.repository.MomentRepository;
 import com.google.firebase.auth.FirebaseAuth;
 
 import java.util.ArrayList;
+import java.util.Collections;
 import java.util.List;
 
 /**
@@ -78,44 +79,18 @@ public class HomeFeedActivity extends AppCompatActivity implements MomentAdapter
         momentRepository.getHomeFeed(currentUserId, new MomentRepository.MomentListCallback() {
             @Override
             public void onSuccess(List<Moment> privateMoments) {
-                final List<Moment> allMoments = new ArrayList<>(privateMoments);
+                List<Moment> moments = new ArrayList<>(privateMoments);
 
-                com.google.firebase.firestore.FirebaseFirestore.getInstance()
-                        .collection("moments")
-                        .whereEqualTo("isPublic", true)
-                        .get()
-                        .addOnSuccessListener(queryDocumentSnapshots -> {
-                            for (com.google.firebase.firestore.DocumentSnapshot doc : queryDocumentSnapshots.getDocuments()) {
-                                Moment moment = doc.toObject(Moment.class);
-                                if (moment != null && "active".equals(moment.getStatus())) {
-                                    if (moment.getMomentId() == null || moment.getMomentId().isEmpty()) {
-                                        moment.setMomentId(doc.getId());
-                                    }
+                // Đề tài MomentShare chỉ hiển thị khoảnh khắc user được gửi riêng.
+                // Không query isPublic để tránh biến app thành feed công khai.
+                Collections.sort(moments, (m1, m2) -> {
+                    if (m1.getCreatedAt() == null && m2.getCreatedAt() == null) return 0;
+                    if (m1.getCreatedAt() == null) return 1;
+                    if (m2.getCreatedAt() == null) return -1;
+                    return m2.getCreatedAt().compareTo(m1.getCreatedAt());
+                });
 
-                                    boolean isDuplicate = false;
-                                    for (Moment existing : allMoments) {
-                                        if (existing.getMomentId() != null && existing.getMomentId().equals(moment.getMomentId())) {
-                                            isDuplicate = true;
-                                            break;
-                                        }
-                                    }
-
-                                    if (!isDuplicate) {
-                                        allMoments.add(moment);
-                                    }
-                                }
-                            }
-
-                            java.util.Collections.sort(allMoments, (m1, m2) -> {
-                                if (m1.getCreatedAt() == null && m2.getCreatedAt() == null) return 0;
-                                if (m1.getCreatedAt() == null) return 1;
-                                if (m2.getCreatedAt() == null) return -1;
-                                return m2.getCreatedAt().compareTo(m1.getCreatedAt());
-                            });
-
-                            momentAdapter.updateData(allMoments);
-                        })
-                        .addOnFailureListener(e -> momentAdapter.updateData(allMoments));
+                momentAdapter.updateData(moments);
             }
 
             @Override

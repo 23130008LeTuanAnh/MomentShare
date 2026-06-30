@@ -18,16 +18,13 @@ import androidx.recyclerview.widget.RecyclerView;
 import com.bumptech.glide.Glide;
 import com.example.momentshare.R;
 import com.example.momentshare.model.Moment;
-import com.example.momentshare.model.NotificationModel;
 import com.example.momentshare.model.Reaction;
 import com.example.momentshare.model.User;
 import com.example.momentshare.repository.AdminRepository;
 import com.example.momentshare.repository.MomentRepository;
 import com.example.momentshare.repository.ReactionRepository;
 import com.example.momentshare.repository.UserRepository;
-import com.google.firebase.Timestamp;
 import com.google.firebase.auth.FirebaseAuth;
-import com.google.firebase.firestore.FirebaseFirestore;
 
 import java.text.SimpleDateFormat;
 import java.util.ArrayList;
@@ -240,6 +237,7 @@ public class MomentDetailActivity extends AppCompatActivity {
             @Override
             public void onSuccess() {
                 btnReportMoment.setEnabled(true);
+                Toast.makeText(MomentDetailActivity.this, "Đã gửi báo cáo cho Admin", Toast.LENGTH_SHORT).show();
             }
 
             @Override
@@ -295,6 +293,15 @@ public class MomentDetailActivity extends AppCompatActivity {
                 return;
             }
 
+            if (reactionEmoji.equals(selectedReaction)) {
+                Toast.makeText(
+                        this,
+                        "Bạn đã thả cảm xúc này rồi",
+                        Toast.LENGTH_SHORT
+                ).show();
+                return;
+            }
+
             boolean isChangingReaction = !selectedReaction.isEmpty() && !selectedReaction.equals(reactionEmoji);
 
             reactionRepository.saveReaction(currentMomentId, currentUserId, reactionEmoji, new ReactionRepository.SaveReactionCallback() {
@@ -303,8 +310,13 @@ public class MomentDetailActivity extends AppCompatActivity {
                     selectedReaction = reactionEmoji;
                     txtSelectedReaction.setText("Your reaction: " + selectedReaction);
 
+                    Toast.makeText(
+                            MomentDetailActivity.this,
+                            isChangingReaction ? "Đã đổi cảm xúc" : "Đã thả cảm xúc",
+                            Toast.LENGTH_SHORT
+                    ).show();
+
                     loadReactions();
-                    sendReactionNotificationToMomentOwner(reactionEmoji);
                 }
 
                 @Override
@@ -312,53 +324,6 @@ public class MomentDetailActivity extends AppCompatActivity {
                     Toast.makeText(MomentDetailActivity.this, "Lỗi khi thả cảm xúc: " + e.getMessage(), Toast.LENGTH_SHORT).show();
                 }
             });
-        });
-    }
-
-    /**
-     * Luôn lấy owner thật từ Firestore trước khi tạo notification.
-     * Không dùng currentUserId làm người nhận notification.
-     */
-    private void sendReactionNotificationToMomentOwner(String reactionEmoji) {
-        if (currentMomentId == null || currentMomentId.trim().isEmpty()) return;
-
-        momentRepository.getMomentById(currentMomentId, new MomentRepository.MomentCallback() {
-            @Override
-            public void onSuccess(Moment moment) {
-                if (moment == null || moment.getSenderId() == null || moment.getSenderId().trim().isEmpty()) {
-                    return;
-                }
-
-                String ownerId = moment.getSenderId();
-                currentSenderId = ownerId;
-
-                if (ownerId.equals(currentUserId)) {
-                    return;
-                }
-
-                FirebaseFirestore db = FirebaseFirestore.getInstance();
-                String notificationId = db.collection("notifications").document().getId();
-
-                NotificationModel notification = new NotificationModel();
-                notification.setNotificationId(notificationId);
-                notification.setUserId(ownerId);
-                notification.setType("reaction");
-                notification.setTitle("Reaction mới");
-                notification.setMessage("Có người đã thả " + reactionEmoji + " vào khoảnh khắc của bạn.");
-                notification.setTargetId(currentMomentId);
-                notification.setRead(false);
-                notification.setCreatedAt(Timestamp.now());
-
-                db.collection("notifications")
-                        .document(notificationId)
-                        .set(notification)
-                        .addOnFailureListener(e -> Log.w(TAG, "Không tạo được notification reaction.", e));
-            }
-
-            @Override
-            public void onError(Exception exception) {
-                Log.w(TAG, "Không xác định được owner để gửi notification reaction.", exception);
-            }
         });
     }
 
