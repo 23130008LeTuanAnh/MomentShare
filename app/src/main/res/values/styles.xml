@@ -1,15 +1,11 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
 
-    <!-- ========================================================= -->
-    <!-- STYLE BỔ SUNG ĐỂ SỬA LỖI AAPT: style not found -->
-    <!-- ========================================================= -->
-
     <!--
         Sửa lỗi:
         resource style/ShapeAppearance not found
 
-        Một số layout đang gọi:
+        Dùng khi layout gọi:
         app:shapeAppearanceOverlay="@style/ShapeAppearance"
     -->
     <style name="ShapeAppearance">
@@ -19,84 +15,14 @@
 
     <!--
         Sửa lỗi:
-        resource style/ShapeAppearance.MomentShare not found
-    -->
-    <style name="ShapeAppearance.MomentShare">
-        <item name="cornerFamily">rounded</item>
-        <item name="cornerSize">20dp</item>
-    </style>
-
-    <!-- Bo góc nhỏ -->
-    <style name="ShapeAppearance.MomentShare.Small">
-        <item name="cornerFamily">rounded</item>
-        <item name="cornerSize">12dp</item>
-    </style>
-
-    <!-- Bo góc vừa -->
-    <style name="ShapeAppearance.MomentShare.Medium">
-        <item name="cornerFamily">rounded</item>
-        <item name="cornerSize">20dp</item>
-    </style>
-
-    <!-- Bo góc lớn -->
-    <style name="ShapeAppearance.MomentShare.Large">
-        <item name="cornerFamily">rounded</item>
-        <item name="cornerSize">28dp</item>
-    </style>
-
-    <!-- Avatar / ảnh tròn -->
-    <style name="ShapeAppearance.MomentShare.CircleImage">
-        <item name="cornerFamily">rounded</item>
-        <item name="cornerSize">50%</item>
-    </style>
-
-    <!-- Nếu layout cũ gọi @style/CircleImage -->
-    <style name="CircleImage">
-        <item name="cornerFamily">rounded</item>
-        <item name="cornerSize">50%</item>
-    </style>
-
-
-    <!-- ========================================================= -->
-    <!-- TEXT APPEARANCE -->
-    <!-- ========================================================= -->
-
-    <!--
-        Sửa lỗi:
         resource style/TextAppearance.MomentShare not found
 
-        Một số TextView đang gọi:
+        Dùng khi TextView gọi:
         android:textAppearance="@style/TextAppearance.MomentShare"
     -->
     <style name="TextAppearance.MomentShare" parent="TextAppearance.Material3.BodyMedium">
         <item name="android:textColor">@color/ms_text</item>
         <item name="android:textSize">15sp</item>
-    </style>
-
-    <!-- Tiêu đề lớn -->
-    <style name="TextAppearance.MomentShare.Title" parent="TextAppearance.Material3.TitleLarge">
-        <item name="android:textColor">@color/ms_text_primary</item>
-        <item name="android:textSize">22sp</item>
-        <item name="android:textStyle">bold</item>
-    </style>
-
-    <!-- Tiêu đề vừa -->
-    <style name="TextAppearance.MomentShare.Subtitle" parent="TextAppearance.Material3.TitleMedium">
-        <item name="android:textColor">@color/ms_text_primary</item>
-        <item name="android:textSize">18sp</item>
-        <item name="android:textStyle">bold</item>
-    </style>
-
-    <!-- Nội dung thường -->
-    <style name="TextAppearance.MomentShare.Body" parent="TextAppearance.Material3.BodyMedium">
-        <item name="android:textColor">@color/ms_text</item>
-        <item name="android:textSize">15sp</item>
-    </style>
-
-    <!-- Chữ phụ / caption -->
-    <style name="TextAppearance.MomentShare.Caption" parent="TextAppearance.Material3.BodySmall">
-        <item name="android:textColor">@color/ms_text_secondary</item>
-        <item name="android:textSize">13sp</item>
     </style>
 
 </resources>
