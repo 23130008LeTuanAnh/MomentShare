@@ -3,175 +3,163 @@ rules_version = '2';
 service cloud.firestore {
   match /databases/{database}/documents {
 
-    // Người 5 thực hiện: kiểm tra người dùng đã đăng nhập Firebase Authentication.
-    function isSignedIn() {
+    function signedIn() {
       return request.auth != null;
     }
 
-    // Người 5 thực hiện: lấy hồ sơ user hiện tại để kiểm tra role/status.
     function currentUserDoc() {
       return get(/databases/$(database)/documents/users/$(request.auth.uid));
     }
 
-    // Người 5 thực hiện: chỉ user active mới được dùng chức năng chính.
-    function isActiveUser() {
-      return isSignedIn()
-        && exists(/databases/$(database)/documents/users/$(request.auth.uid))
-        && currentUserDoc().data.status == 'active';
-    }
-
-    // Người 5 thực hiện: kiểm tra quyền ADMIN từ field role trong collection users.
     function isAdmin() {
-      return isSignedIn()
+      return signedIn()
         && exists(/databases/$(database)/documents/users/$(request.auth.uid))
-        && currentUserDoc().data.role == 'ADMIN';
+        && currentUserDoc().data.role == "ADMIN"
+        && currentUserDoc().data.status == "active";
     }
 
-    // Người 5 thực hiện: kiểm tra người dùng có phải chủ hồ sơ hay không.
+    function isActiveUser() {
+      return signedIn()
+        && exists(/databases/$(database)/documents/users/$(request.auth.uid))
+        && currentUserDoc().data.status == "active";
+    }
+
     function isSelf(userId) {
-      return isSignedIn() && request.auth.uid == userId;
+      return signedIn() && request.auth.uid == userId;
     }
 
-    // Người 5 thực hiện: kiểm tra người dùng có liên quan đến quan hệ bạn bè/lời mời hay không.
-    function isRelationParticipant(userId, friendUserId) {
-      return isSignedIn()
-        && (request.auth.uid == userId || request.auth.uid == friendUserId || isAdmin());
-    }
-
-    // Người 5 thực hiện: kiểm tra người dùng có phải người gửi moment hay không.
-    function isMomentSender(momentId) {
-      return isSignedIn()
-        && exists(/databases/$(database)/documents/moments/$(momentId))
-        && get(/databases/$(database)/documents/moments/$(momentId)).data.senderId == request.auth.uid;
-    }
-
+    // USERS
     match /users/{userId} {
-      allow get: if isActiveUser() || isSelf(userId) || isAdmin();
-      allow list: if isActiveUser() || isAdmin();
+      // Cho phép đọc users để kiểm tra username/email lúc đăng ký và tìm bạn.
+      allow get, list: if true;
 
-      allow create: if isSelf(userId)
-        && request.resource.data.userId == request.auth.uid
-        && request.resource.data.role == 'USER'
-        && request.resource.data.status == 'active';
+      allow create: if isSelf(userId);
 
       allow update: if isAdmin()
-        || (isSelf(userId)
-          && !request.resource.data.diff(resource.data).affectedKeys().hasAny(['role', 'status']));
+        || isSelf(userId);
 
       allow delete: if isAdmin();
     }
 
+    // FRIEND REQUESTS
     match /friend_requests/{requestId} {
-      allow read: if isActiveUser()
-        && isRelationParticipant(resource.data.senderId, resource.data.receiverId);
+      allow read: if signedIn();
 
-      allow create: if isActiveUser()
-        && request.resource.data.senderId == request.auth.uid
-        && request.resource.data.receiverId is string
-        && request.resource.data.status == 'pending';
+      allow create: if signedIn()
+        && request.auth.uid == request.resource.data.senderId;
 
-      allow update: if isActiveUser()
-        && isRelationParticipant(resource.data.senderId, resource.data.receiverId);
-
-      allow delete: if isActiveUser()
-        && isRelationParticipant(resource.data.senderId, resource.data.receiverId);
+      allow update, delete: if signedIn()
+        && (
+          request.auth.uid == resource.data.senderId ||
+          request.auth.uid == resource.data.receiverId ||
+          isAdmin()
+        );
     }
 
+    // FRIENDS
     match /friends/{friendId} {
-      allow read: if isActiveUser()
-        && isRelationParticipant(resource.data.userId, resource.data.friendUserId);
+      allow read: if signedIn();
 
-      allow create: if isActiveUser()
-        && isRelationParticipant(request.resource.data.userId, request.resource.data.friendUserId);
+      allow create: if signedIn()
+        && (
+          request.auth.uid == request.resource.data.userId ||
+          request.auth.uid == request.resource.data.friendUserId
+        );
 
-      allow delete: if isActiveUser()
-        && isRelationParticipant(resource.data.userId, resource.data.friendUserId);
-
-      allow update: if false;
+      allow update, delete: if signedIn()
+        && (
+          request.auth.uid == resource.data.userId ||
+          request.auth.uid == resource.data.friendUserId ||
+          isAdmin()
+        );
     }
 
+    // MOMENTS
     match /moments/{momentId} {
-      allow read: if isAdmin()
-        || (isActiveUser() && resource.data.status == 'active');
+      allow read: if signedIn();
 
-      allow create: if isActiveUser()
-        && request.resource.data.senderId == request.auth.uid
+      // Code hiện tại lưu người gửi bằng senderId.
+      allow create: if signedIn()
+        && request.auth.uid == request.resource.data.senderId
         && request.resource.data.imageUrl is string
-        && request.resource.data.status == 'active';
+        && request.resource.data.status == "active";
 
-      allow update: if isAdmin()
-        || (isActiveUser()
-          && resource.data.senderId == request.auth.uid
-          && !request.resource.data.diff(resource.data).affectedKeys().hasAny(['senderId']));
-
-      allow delete: if isAdmin();
+      allow update, delete: if signedIn()
+        && (
+          request.auth.uid == resource.data.senderId ||
+          isAdmin()
+        );
     }
 
-    match /moment_receivers/{receiverRecordId} {
-      allow read: if isAdmin()
-        || (isActiveUser()
-          && (resource.data.receiverId == request.auth.uid || isMomentSender(resource.data.momentId)));
+    // MOMENT RECEIVERS
+    match /moment_receivers/{receiverDocId} {
+      allow read: if signedIn();
 
-      allow create: if isActiveUser()
-        && isMomentSender(request.resource.data.momentId)
-        && request.resource.data.receiverId is string;
+      // MomentRepository đã bổ sung senderId vào moment_receivers để kiểm tra người gửi.
+      allow create: if signedIn()
+        && request.auth.uid == request.resource.data.senderId
+        && request.resource.data.receiverId is string
+        && request.resource.data.momentId is string;
 
-      allow update: if isAdmin()
-        || (isActiveUser() && resource.data.receiverId == request.auth.uid);
-
-      allow delete: if isAdmin();
+      allow update, delete: if signedIn()
+        && (
+          request.auth.uid == resource.data.receiverId ||
+          request.auth.uid == resource.data.senderId ||
+          isAdmin()
+        );
     }
 
+    // REACTIONS
     match /reactions/{reactionId} {
-      allow read: if isActiveUser() || isAdmin();
+      allow read: if signedIn();
 
-      allow create: if isActiveUser()
-        && request.resource.data.userId == request.auth.uid
-        && request.resource.data.momentId is string
-        && request.resource.data.emoji is string;
+      allow create: if signedIn()
+        && request.auth.uid == request.resource.data.userId;
 
-      allow update: if isAdmin()
-        || (isActiveUser() && resource.data.userId == request.auth.uid);
-
-      allow delete: if isAdmin()
-        || (isActiveUser() && resource.data.userId == request.auth.uid);
+      allow update, delete: if signedIn()
+        && (
+          request.auth.uid == resource.data.userId ||
+          isAdmin()
+        );
     }
 
+    // NOTIFICATIONS
     match /notifications/{notificationId} {
-      allow read: if isAdmin()
-        || (isActiveUser() && resource.data.userId == request.auth.uid);
+      allow read: if signedIn()
+        && (
+          request.auth.uid == resource.data.userId ||
+          isAdmin()
+        );
 
-      // Người 5 thực hiện: client hiện tại tạo in-app notification khi gửi ảnh/lời mời/reaction.
-      // Với production thật nên chuyển phần create notification sang Cloud Functions.
-      allow create: if isActiveUser()
+      allow create: if signedIn()
         && request.resource.data.userId is string
         && request.resource.data.type is string
         && request.resource.data.title is string
         && request.resource.data.message is string;
 
-      allow update: if isAdmin()
-        || (isActiveUser() && resource.data.userId == request.auth.uid);
-
-      allow delete: if isAdmin()
-        || (isActiveUser() && resource.data.userId == request.auth.uid);
+      allow update, delete: if signedIn()
+        && (
+          request.auth.uid == resource.data.userId ||
+          isAdmin()
+        );
     }
 
+    // REPORTS
     match /reports/{reportId} {
+      allow create: if signedIn();
+
       allow read: if isAdmin()
-        || (isActiveUser() && resource.data.reporterId == request.auth.uid);
+        || (
+          signedIn()
+          && resource.data.reporterId == request.auth.uid
+        );
 
-      allow create: if isActiveUser()
-        && request.resource.data.reporterId == request.auth.uid
-        && request.resource.data.momentId is string
-        && request.resource.data.reason is string
-        && request.resource.data.status == 'pending';
-
-      allow update: if isAdmin();
-      allow delete: if isAdmin();
+      allow update, delete: if isAdmin();
     }
 
+    // Dự phòng cho các collection khác trong lúc test/demo.
     match /{document=**} {
-      allow read, write: if false;
+      allow read, write: if signedIn();
     }
   }
 }
