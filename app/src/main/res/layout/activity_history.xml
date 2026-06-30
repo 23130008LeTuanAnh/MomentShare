@@ -24,7 +24,7 @@
             android:layout_height="48dp"
             android:layout_gravity="start|center_vertical"
             android:background="?attr/selectableItemBackgroundBorderless"
-            android:contentDescription="Back"
+            android:contentDescription="Quay lại"
             android:padding="12dp"
             android:src="@android:drawable/ic_media_previous" />
 
@@ -32,25 +32,96 @@
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
             android:layout_gravity="center"
-            android:text="Moment history"
+            android:text="Lịch sử khoảnh khắc"
             android:textColor="#000000"
             android:textSize="18sp"
             android:textStyle="bold" />
     </androidx.appcompat.widget.Toolbar>
 
-    <TextView
-        android:id="@+id/txtHistoryHint"
+    <LinearLayout
+        android:id="@+id/layoutHistoryControls"
         android:layout_width="0dp"
         android:layout_height="wrap_content"
+        android:orientation="vertical"
         android:paddingHorizontal="16dp"
         android:paddingTop="12dp"
         android:paddingBottom="8dp"
-        android:text="Sent and received moments"
-        android:textColor="#555555"
-        android:textSize="14sp"
         app:layout_constraintEnd_toEndOf="parent"
         app:layout_constraintStart_toStartOf="parent"
-        app:layout_constraintTop_toBottomOf="@id/toolbarHistory" />
+        app:layout_constraintTop_toBottomOf="@id/toolbarHistory">
+
+        <TextView
+            android:id="@+id/txtHistoryHint"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:text="Các khoảnh khắc bạn bè đã gửi cho bạn"
+            android:textColor="#555555"
+            android:textSize="14sp" />
+
+        <LinearLayout
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="10dp"
+            android:orientation="horizontal">
+
+            <Button
+                android:id="@+id/btnTabReceived"
+                android:layout_width="0dp"
+                android:layout_height="44dp"
+                android:layout_weight="1"
+                android:text="Đã nhận"
+                android:textAllCaps="false" />
+
+            <Button
+                android:id="@+id/btnTabSent"
+                android:layout_width="0dp"
+                android:layout_height="44dp"
+                android:layout_marginStart="8dp"
+                android:layout_weight="1"
+                android:text="Đã gửi"
+                android:textAllCaps="false" />
+        </LinearLayout>
+
+        <EditText
+            android:id="@+id/edtHistorySearch"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="10dp"
+            android:background="@android:drawable/edit_text"
+            android:hint="Tìm theo caption hoặc mã người liên quan"
+            android:inputType="text"
+            android:maxLines="1"
+            android:padding="12dp" />
+
+        <Spinner
+            android:id="@+id/spinnerHistoryTime"
+            android:layout_width="match_parent"
+            android:layout_height="48dp"
+            android:layout_marginTop="8dp" />
+
+        <TextView
+            android:id="@+id/txtHistoryCount"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="4dp"
+            android:text="0 khoảnh khắc phù hợp"
+            android:textColor="#6B7280"
+            android:textSize="13sp" />
+    </LinearLayout>
+
+    <TextView
+        android:id="@+id/txtEmptyHistory"
+        android:layout_width="0dp"
+        android:layout_height="wrap_content"
+        android:gravity="center"
+        android:padding="24dp"
+        android:text="Chưa có khoảnh khắc phù hợp"
+        android:textColor="#6B7280"
+        android:textSize="15sp"
+        android:visibility="gone"
+        app:layout_constraintEnd_toEndOf="parent"
+        app:layout_constraintStart_toStartOf="parent"
+        app:layout_constraintTop_toBottomOf="@id/layoutHistoryControls" />
 
     <androidx.recyclerview.widget.RecyclerView
         android:id="@+id/rvHistory"
@@ -61,7 +132,7 @@
         app:layout_constraintBottom_toBottomOf="parent"
         app:layout_constraintEnd_toEndOf="parent"
         app:layout_constraintStart_toStartOf="parent"
-        app:layout_constraintTop_toBottomOf="@id/txtHistoryHint"
+        app:layout_constraintTop_toBottomOf="@id/layoutHistoryControls"
         tools:listitem="@layout/item_history_moment" />
 
 </androidx.constraintlayout.widget.ConstraintLayout>

@@ -179,6 +179,18 @@
             android:textStyle="bold" />
 
         <Button
+            android:id="@+id/btnHistory"
+            android:layout_width="match_parent"
+            android:layout_height="52dp"
+            android:layout_marginTop="12dp"
+            android:backgroundTint="#6F50B5"
+            android:text="Lịch sử ảnh"
+            android:textAllCaps="false"
+            android:textColor="#FFFFFF"
+            android:textSize="14sp"
+            android:textStyle="bold" />
+
+        <Button
             android:id="@+id/btnFriendList"
             android:layout_width="match_parent"
             android:layout_height="52dp"
